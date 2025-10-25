@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 
+#define LogLine() { FLog::Log(__FILE__, __FUNCTION__, __LINE__); }
+
 class U2505_P2_API FLog
 {
 public:
@@ -11,6 +13,7 @@ public:
 	static void Log(const FVector& InValue);
 	static void Log(const FRotator& InValue);
 	static void Log(const UObject* InValue);
+	static void Log(const FString& InFileName, const FString& InFuncName, int32 InLineNumber);
 
 	static void Print(int32 InValue, int32 InKey = -1, float InDuration = 10, const FColor& InColor = FColor::Blue);
 	static void Print(float InValue, int32 InKey = -1, float InDuration = 10, const FColor& InColor = FColor::Blue);

@@ -10,8 +10,6 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "Characters/CAIController.h"
 
-
-
 UCBTTaskNode_Patrol::UCBTTaskNode_Patrol()
 {
 	NodeName = "Patrol";
@@ -34,8 +32,8 @@ EBTNodeResult::Type UCBTTaskNode_Patrol::ExecuteTask(UBehaviorTreeComponent& Own
 	FNavLocation	 resultLocation;
 	ANavigationData* UseNavData = NavSys->GetDefaultNavDataInstance(FNavigationSystem::DontCreate);
 
-	CheckFalseResult(NavSys->GetRandomPointInNavigableRadius(ai->StartLocation, Radius, resultLocation), EBTNodeResult::Failed);
-	
+	CheckFalseResult(NavSys->GetRandomReachablePointInRadius(ai->StartLocation, Radius, resultLocation), EBTNodeResult::Failed);
+
 	UBlackboardComponent* blackboard = OwnerComp.GetBlackboardComponent();
 	blackboard->SetValueAsVector(PatrolLocationKey, resultLocation.Location);
 
@@ -66,7 +64,7 @@ void UCBTTaskNode_Patrol::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* Nod
 	CheckNull(ai);
 
 	UBlackboardComponent* blackboard = OwnerComp.GetBlackboardComponent();
-	FVector location = blackboard->GetValueAsVector(PatrolLocationKey);
+	FVector				  location = blackboard->GetValueAsVector(PatrolLocationKey);
 
 	EPathFollowingRequestResult::Type result = controller->MoveToLocation(location, AcceptanceRadius, false);
 

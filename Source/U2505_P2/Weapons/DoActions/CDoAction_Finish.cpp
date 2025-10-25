@@ -15,13 +15,14 @@ void UCDoAction_Finish::Tick(float InDeltaTime)
 {
 	Super::Tick(InDeltaTime);
 
+	CheckNotValid(OwnerCharacter);
 	CheckNull(Target);
 
-	FVector direction = (Target->GetActorLocation() - OwnerCharacter->GetActorLocation()).GetSafeNormal();
-	float	Distance = FVector::Dist(Target->GetActorLocation(), OwnerCharacter->GetActorLocation());
+	FVector direction = (Target->GetActorLocation() - OwnerCharacter.Get()->GetActorLocation()).GetSafeNormal();
+	float	Distance = FVector::Dist(Target->GetActorLocation(), OwnerCharacter.Get()->GetActorLocation());
 	if (Distance > ActionDist)
 	{
-		OwnerCharacter->AddMovementInput(direction, 1.0f);
+		OwnerCharacter.Get()->AddMovementInput(direction, 1.0f);
 	}
 	else
 	{
@@ -33,10 +34,11 @@ void UCDoAction_Finish::Tick(float InDeltaTime)
 void UCDoAction_Finish::DoAction()
 {
 	CheckFalse(Datas.Num() > 0);
+	CheckNotValid(OwnerCharacter);
 
 	Super::DoAction();
 
-	Datas[0].DoAction(OwnerCharacter);
+	Datas[0].DoAction(OwnerCharacter.Get());
 
 	CheckFalse(DamagedDatas.Num() > 0);
 	CheckNull(Target);
@@ -49,15 +51,15 @@ void UCDoAction_Finish::DoAction()
 	enemy->SetDeadMontage(DamagedDatas[0].Montage, DamagedDatas[0].PlayRate);
 	{
 		FVector start = enemy->GetActorLocation();
-		FVector look = OwnerCharacter->GetActorLocation();
+		FVector look = OwnerCharacter.Get()->GetActorLocation();
 		look.Z = start.Z;
 		enemy->SetActorRotation(UKismetMathLibrary::FindLookAtRotation(start, look));
 	}
 	{
-		FVector start = OwnerCharacter->GetActorLocation();
+		FVector start = OwnerCharacter.Get()->GetActorLocation();
 		FVector look = enemy->GetActorLocation();
 		look.Z = start.Z;
-		OwnerCharacter->SetActorRotation(UKismetMathLibrary::FindLookAtRotation(start, look));
+		OwnerCharacter.Get()->SetActorRotation(UKismetMathLibrary::FindLookAtRotation(start, look));
 	}
 
 	enemyState->SetDeadMode();
@@ -66,24 +68,26 @@ void UCDoAction_Finish::DoAction()
 void UCDoAction_Finish::Begin_DoAction()
 {
 	Super::Begin_DoAction();
-
-	// Datas[0].DoAction(OwnerCharacter);
 }
 
 void UCDoAction_Finish::End_DoAction()
 {
+	CheckNotValid(OwnerCharacter);
+
 	Super::End_DoAction();
 
-	Datas[0].End_DoAction(OwnerCharacter);
+	Datas[0].End_DoAction(OwnerCharacter.Get());
 }
 
 void UCDoAction_Finish::FindTarget()
 {
+	CheckNotValid(OwnerCharacter);
+
 	// 트레이스로 전방 체력 30% 미만 적 탐색. 가장 가까운 적 리턴
-	FVector			start = OwnerCharacter->GetActorLocation();
-	FVector			end = OwnerCharacter->GetActorLocation() + OwnerCharacter->GetActorForwardVector() * Dist;
+	FVector			start = OwnerCharacter.Get()->GetActorLocation();
+	FVector			end = OwnerCharacter.Get()->GetActorLocation() + OwnerCharacter.Get()->GetActorForwardVector() * Dist;
 	TArray<AActor*> ignore;
-	ignore.Add(OwnerCharacter);
+	ignore.Add(OwnerCharacter.Get());
 
 	EDrawDebugTrace::Type drawDebugType = bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
 	TArray<FHitResult>	  hitResults;
@@ -125,12 +129,13 @@ void UCDoAction_Finish::MoveToTarget(float InDeltaTime)
 // 유효성 검사 및 전방 각도 계산
 bool UCDoAction_Finish::ValidTarget(ACharacter* InTarget)
 {
+	CheckNotValidResult(OwnerCharacter, false);
 	CheckNullResult(InTarget, false);
 
-	FVector toTarget = InTarget->GetActorLocation() - OwnerCharacter->GetActorLocation();
+	FVector toTarget = InTarget->GetActorLocation() - OwnerCharacter.Get()->GetActorLocation();
 	toTarget.Z = 0.0f; // 높이는 무시함
 	toTarget = toTarget.GetSafeNormal();
-	float dot = FVector::DotProduct(OwnerCharacter->GetActorForwardVector(), toTarget);
+	float dot = FVector::DotProduct(OwnerCharacter.Get()->GetActorForwardVector(), toTarget);
 	if (dot >= FMath::Cos(FMath::DegreesToRadians(Degree)))
 		return true;
 
@@ -139,9 +144,10 @@ bool UCDoAction_Finish::ValidTarget(ACharacter* InTarget)
 
 float UCDoAction_Finish::CalcDistance(ACharacter* InTarget)
 {
-	FVector toTarget = InTarget->GetActorLocation() - OwnerCharacter->GetActorLocation();
+	CheckNotValidResult(OwnerCharacter, std::numeric_limits<float>::max());
+	FVector toTarget = InTarget->GetActorLocation() - OwnerCharacter.Get()->GetActorLocation();
 
-	float dist = FVector::Dist2D(InTarget->GetActorLocation(), OwnerCharacter->GetActorLocation());
+	float dist = FVector::Dist2D(InTarget->GetActorLocation(), OwnerCharacter.Get()->GetActorLocation());
 	dist = FMath::Abs(dist);
 
 	return dist;

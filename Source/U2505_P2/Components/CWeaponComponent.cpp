@@ -52,6 +52,18 @@ void UCWeaponComponent::BeginPlay()
 	state->OnStateTypeChanged.AddDynamic(this, &UCWeaponComponent::OnStateTypeChanged);
 }
 
+void UCWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	OnWeaponTypeChanged.RemoveAll(this);
+	OnActionTypeChanged.RemoveAll(this);
+
+	UCStateComponent* state = FHelpers::GetComponent<UCStateComponent>(OwnerCharacter);
+	if (IsValid(state))
+		state->OnStateTypeChanged.RemoveDynamic(this, &UCWeaponComponent::OnStateTypeChanged);
+
+	Super::EndPlay(EndPlayReason);
+}
+
 void UCWeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -91,7 +103,6 @@ UCWeaponAsset* UCWeaponComponent::GetWeaponAsset(EWeaponType InType)
 
 ACAttachment* UCWeaponComponent::GetAttachment(EWeaponType InType)
 {
-	// CheckTrueResult(IsUnarmedMode(), nullptr);
 	CheckFalseResult(WeaponDataMap.Contains(InType), nullptr);
 
 	return WeaponDataMap.Find(InType)->Attachment;
@@ -384,6 +395,16 @@ void UCWeaponComponent::SetKatanaMode()
 	SetMode(EWeaponType::Katana);
 }
 
+void UCWeaponComponent::SetMagicMode()
+{
+	SetMode(EWeaponType::Magic);
+}
+
+void UCWeaponComponent::SetBowMode()
+{
+	SetMode(EWeaponType::Bow);
+}
+
 void UCWeaponComponent::SetMode(EWeaponType InType)
 {
 
@@ -508,7 +529,10 @@ void UCWeaponComponent::DoAction_Attack()
 	}
 	else
 	{
-		OnCharge();
+		if (OwnerCharacter->IsA<ACPlayer>())
+		{
+			OnCharge();
+		}
 
 		if (movement->IsFalling())
 		{
@@ -564,6 +588,21 @@ void UCWeaponComponent::Begin_DownStrike()
 void UCWeaponComponent::AttachTo(FName InSocketName)
 {
 	GetAttachment()->AttachTo(InSocketName);
+}
+
+void UCWeaponComponent::GetWeaponSocketLocation(FName InSocketName, FVectorData& OutLocationData)
+{
+	ACAttachment* weapon = GetAttachment();
+
+	CheckNull(weapon);
+
+	USkeletalMeshComponent* mesh = FHelpers::GetComponent<USkeletalMeshComponent>(weapon);
+	CheckNull(mesh);
+
+	CheckFalse(mesh->DoesSocketExist(InSocketName));
+
+	OutLocationData.bChecked = true;
+	OutLocationData.V = mesh->GetSocketLocation(InSocketName);
 }
 
 void UCWeaponComponent::OnStateTypeChanged(EStateType InPrevType, EStateType InNewType)

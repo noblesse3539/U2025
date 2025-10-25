@@ -35,6 +35,18 @@
 			return y;         \
 	}
 
+#define CheckNotValid(x)          \
+	{                             \
+		if (x.IsValid() == false) \
+			return;               \
+	}
+
+#define CheckNotValidResult(x, y) \
+	{                             \
+		if (x.IsValid() == false) \
+			return y;             \
+	}
+
 #define CreateTextRenderComponent()                                                 \
 	{                                                                               \
 		FHelpers::CreateComponent<UTextRenderComponent>(this, &Text, "Text", Root); \
@@ -141,5 +153,13 @@ public:
 	static void AttachTo(AActor* InActor, USceneComponent* InParent, FName InSocketName = NAME_None, EAttachmentRule InRule = EAttachmentRule::KeepRelative)
 	{
 		InActor->AttachToComponent(InParent, FAttachmentTransformRules(InRule, true), InSocketName);
+	}
+
+	static void ClearTimer(UWorld* InWorld, FTimerHandle& InHandle)
+	{
+		if (!IsValid(InWorld))
+			return;
+
+		InWorld->GetTimerManager().ClearTimer(InHandle);
 	}
 };

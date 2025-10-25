@@ -17,6 +17,11 @@ public:
 
 protected:
 	void BeginPlay() override;
+
+public:
+	virtual void BeginDestroy() override;
+
+protected:
 	void OnPossess(APawn* InPawn) override;
 	void OnUnPossess() override;
 

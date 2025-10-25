@@ -3,7 +3,6 @@
 #include "GameFramework/Character.h"
 
 #include "Components/CStateComponent.h"
-#include "Components/CMovementComponent.h"
 #include "Components/CWeaponTraceComponent.h"
 #include "Weapons/CDoAction.h"
 #include "Weapons/CAttachment.h"
@@ -19,38 +18,32 @@ void UCActionBase::BeginPlay(ACharacter* InOwnerCharacter, ACAttachment* InAttac
 
 	Attachment = InAttachment;
 
-	State = FHelpers::GetComponent<UCStateComponent>(InOwnerCharacter);
+	State = FHelpers::GetComponent<UCStateComponent>(OwnerCharacter.Get());
 
 	State->OnStateTypeChanged.AddDynamic(this, &UCActionBase::OnStateTypeChanged);
 
-	Movement = FHelpers::GetComponent<UCMovementComponent>(InOwnerCharacter);
-
 	if (!!DoActionClass)
 	{
-		DoAction = NewObject<UCDoAction>(this, DoActionClass);
-		DoAction->BeginPlay(InOwnerCharacter, InAttachment, InEquipment, DoActionDatas, DamagedDatas, InActionType);
 
+		UCWeaponTraceComponent* weaponTrace = nullptr;
 		if (!!Attachment)
 		{
-			Attachment->OnAttachmentBeginCollision.AddDynamic(DoAction, &UCDoAction::OnAttachmentBeginCollision);
-			Attachment->OnAttachmentEndCollision.AddDynamic(DoAction, &UCDoAction::OnAttachmentEndCollision);
-
-			Attachment->OnAttachmentBeginOverlap.AddDynamic(DoAction, &UCDoAction::OnAttachmentBeginOverlap);
-			Attachment->OnAttachmentEndOverlap.AddDynamic(DoAction, &UCDoAction::OnAttachmentEndOverlap);
-
-			UCWeaponTraceComponent* weaponTrace = FHelpers::GetComponent<UCWeaponTraceComponent>(Attachment);
-			if (!!weaponTrace)
-			{
-				weaponTrace->OnWeaponTraceBeginOverlap.AddDynamic(DoAction, &UCDoAction::OnAttachmentBeginOverlap);
-			}
+			weaponTrace = FHelpers::GetComponent<UCWeaponTraceComponent>(Attachment);
 		}
 
-		// if (!!Equipment) {
-		//	InWeaponData.Equipment->OnEquipmentBeginEquip.AddDynamic(InWeaponData.Action, &UCDoAction::OnEquipmentBeginEquip);
-		//	InWeaponData.Equipment->OnEquipmentEndEquip.AddDynamic(InWeaponData.Action, &UCDoAction::OnEquipmentEndEquip);
-		//	InWeaponData.Equipment->OnEquipmentUnequip.AddDynamic(InWeaponData.Action, &UCDoAction::OnEquipmentUnequip);
-		// }
+		DoAction = NewObject<UCDoAction>(this, DoActionClass);
+		DoAction->BeginPlay(InOwnerCharacter, InAttachment, InEquipment, weaponTrace, DoActionDatas, DamagedDatas, InActionType);
 	}
+}
+
+void UCActionBase::BeginDestroy()
+{
+	if (State.IsValid())
+	{
+		State->OnStateTypeChanged.RemoveDynamic(this, &UCActionBase::OnStateTypeChanged);
+	}
+
+	Super::BeginDestroy();
 }
 
 void UCActionBase::Pressed()

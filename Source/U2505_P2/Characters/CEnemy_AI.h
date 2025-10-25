@@ -48,4 +48,5 @@ private:
 	class ACSquad* OwnerSquad = nullptr;
 	FName		   TargetKey = "Target";
 	FName		   OrderTargetKey = "OrderTarget";
+	FName		   AIStateKey = "AIState";
 };

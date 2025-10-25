@@ -16,6 +16,8 @@
 #include "Components/CMovementComponent.h"
 #include "Components/CWeaponComponent.h"
 #include "Components/CStateComponent.h"
+#include "Components/CMouseComponent.h"
+#include "Components/CTargetComponent.h"
 
 #include "Weapons/Actions/CAction_Defend.h"
 
@@ -23,10 +25,15 @@ ACPlayer::ACPlayer()
 {
 	FHelpers::CreateComponent<USpringArmComponent>(this, &SpringArm, "SpringArm", GetCapsuleComponent());
 	FHelpers::CreateComponent<UCameraComponent>(this, &Camera, "Camera", SpringArm);
+	FHelpers::CreateComponent<USpringArmComponent>(this, &SpringArm2, "SpringArm2", GetCapsuleComponent());
+	FHelpers::CreateComponent<UCameraComponent>(this, &Camera2, "Camera2", SpringArm2);
+
 	FHelpers::CreateActorComponent<UCMovementComponent>(this, &Movement, "Movement");
 	FHelpers::CreateActorComponent<UCWeaponComponent>(this, &Weapon, "Weapon");
 	FHelpers::CreateActorComponent<UCStateComponent>(this, &State, "State");
 	FHelpers::CreateActorComponent<UCZoomComponent>(this, &Zoom, "Zoom");
+	FHelpers::CreateActorComponent<UCMouseComponent>(this, &Mouse, "Mouse");
+	FHelpers::CreateActorComponent<UCTargetComponent>(this, &TargetComponent, "TargetComponent");
 
 	USkeletalMesh* mesh;
 	FHelpers::GetAsset<USkeletalMesh>(&mesh, "/Script/Engine.SkeletalMesh'/Game/FlexibleCombatSystem/DemoFolder/SK_Mannequin.SK_Mannequin'");
@@ -38,10 +45,24 @@ ACPlayer::ACPlayer()
 	FHelpers::GetClass<UCAnimInstance>(&animInstance, "/Script/Engine.AnimBlueprint'/Game/ABP_Character.ABP_Character_C'");
 	GetMesh()->SetAnimClass(animInstance);
 
-	SpringArm->SetRelativeLocation(FVector(0, 0, 60));
-	SpringArm->TargetArmLength = 420;
-	SpringArm->bUsePawnControlRotation = true;
-	SpringArm->bEnableCameraLag = true;
+	// Main Camera
+	{
+		Camera->SetRelativeLocation(FVector(0, 50, 0));
+		SpringArm->SetRelativeLocation(FVector(0, 0, 60));
+		SpringArm->TargetArmLength = 420;
+		SpringArm->bUsePawnControlRotation = true;
+		SpringArm->bEnableCameraLag = true;
+	}
+
+	// Sub Camera
+	{
+		Camera2->SetRelativeLocation(FVector(0, 50, 0));
+		SpringArm2->SetRelativeLocation(FVector(0, 0, 60));
+		SpringArm2->SetRelativeRotation(FRotator(0, -90, 0));
+		SpringArm->TargetArmLength = 420;
+		SpringArm2->bUsePawnControlRotation = true;
+		SpringArm2->bEnableCameraLag = true;
+	}
 }
 
 void ACPlayer::BeginPlay()
@@ -59,6 +80,17 @@ void ACPlayer::BeginPlay()
 	HealthPoint = Cast<UCUserWidget_HP>(widget);
 }
 
+void ACPlayer::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (!!State)
+		State->OnStateTypeChanged.RemoveDynamic(this, &ACPlayer::OnStateTypeChanged);
+
+	// if (!!Weapon)
+	// Weapon->OnWeaponTypeChanged.RemoveDynamic(this, &ACPlayer::OnWeaponTypeChanged);
+
+	Super::EndPlay(EndPlayReason);
+}
+
 void ACPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -74,12 +106,14 @@ void ACPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAction("Katana", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::SetKatanaMode);
 	PlayerInputComponent->BindAction("Sword", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::SetSwordMode);
-	PlayerInputComponent->BindAction("Axe", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::SetAxeMode);
+	// PlayerInputComponent->BindAction("Axe", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::SetAxeMode);
+	PlayerInputComponent->BindAction("Magic", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::SetMagicMode);
+	PlayerInputComponent->BindAction("Bow", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::SetBowMode);
 
-	PlayerInputComponent->BindAction("Defend", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::Action_Defend_Pressed);
-	PlayerInputComponent->BindAction("Defend", EInputEvent::IE_Released, Weapon, &UCWeaponComponent::Action_Defend_Released);
+	PlayerInputComponent->BindAction("Action2", EInputEvent::IE_Pressed, this, &ACPlayer::Action2_Pressed);
+	PlayerInputComponent->BindAction("Action2", EInputEvent::IE_Released, Weapon, &UCWeaponComponent::Action_Defend_Released);
 
-	PlayerInputComponent->BindAction("Action", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::DoAction_Attack);
+	PlayerInputComponent->BindAction("Action", EInputEvent::IE_Pressed, this, &ACPlayer::Action_Pressed);
 	PlayerInputComponent->BindAction("Action", EInputEvent::IE_Released, Weapon, &UCWeaponComponent::OffCharge); // Todo
 
 	PlayerInputComponent->BindAction("Action3", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::Action_Air_Pressed);
@@ -87,8 +121,45 @@ void ACPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAction("Skill1", EInputEvent::IE_Pressed, Weapon, &UCWeaponComponent::Action_Skill_Pressed); // Todo
 
+	PlayerInputComponent->BindAction("ShowCursor", EInputEvent::IE_Pressed, Mouse, &UCMouseComponent::ShowCursor);
+	PlayerInputComponent->BindAction("ShowCursor", EInputEvent::IE_Released, Mouse, &UCMouseComponent::HideCursor);
+
 	if (!!Zoom)
 		PlayerInputComponent->BindAxis("Zoom", Zoom, &UCZoomComponent::SetValue);
+}
+
+void ACPlayer::Action_Pressed()
+{
+	APlayerController* controller = GetController<APlayerController>();
+	CheckNull(controller);
+
+	if (controller->IsInputKeyDown(EKeys::LeftAlt))
+	{
+		CheckNull(Mouse);
+		Mouse->OnLeftClick();
+	}
+	else
+	{
+		CheckNull(Weapon);
+		Weapon->DoAction_Attack();
+	}
+}
+
+void ACPlayer::Action2_Pressed()
+{
+	APlayerController* controller = GetController<APlayerController>();
+	CheckNull(controller);
+
+	if (controller->IsInputKeyDown(EKeys::LeftAlt))
+	{
+		CheckNull(Mouse);
+		Mouse->OnRightClick();
+	}
+	else
+	{
+		CheckNull(Weapon);
+		Weapon->Action_Defend_Pressed();
+	}
 }
 
 float ACPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -138,8 +209,10 @@ void ACPlayer::OnStateTypeChanged(EStateType InPrevType, EStateType InNewType)
 
 void ACPlayer::Damage()
 {
+	CheckNull(State);
+
 	// 움직임 제한
-	if (!!Movement)
+	if (!!Movement && !State->IsDefendMode())
 	{
 		Movement->Stop();
 	}
@@ -201,7 +274,10 @@ void ACPlayer::Dead()
 	}
 
 	// 몽타주가 존재하지 않아도 End_Dead를 호출해 객체 소멸
-	FTimerDelegate timerDelegate = FTimerDelegate::CreateUObject(this, &ACPlayer::End_Dead);
+
+	FTimerDelegate timerDelegate = FTimerDelegate::CreateWeakLambda(this, [this]() {
+		End_Dead();
+	});
 
 	FTimerHandle handle;
 	GetWorld()->GetTimerManager().SetTimer(handle, timerDelegate, 0.2f, false);
@@ -339,6 +415,14 @@ void ACPlayer::Damaged_LookAt()
 
 void ACPlayer::End_Dead()
 {
+	TArray<AActor*> actors;
+	GetAttachedActors(actors, true, true);
+
+	for (int32 i = actors.Num() - 1; i >= 0; i--)
+	{
+		actors[i]->Destroy();
+	}
+
 	Destroy();
 }
 
@@ -397,6 +481,30 @@ void ACPlayer::Possess()
 void ACPlayer::DisPossess()
 {
 	PossessCnt = UKismetMathLibrary::Clamp(PossessCnt + 1, 0, 2);
+}
+
+void ACPlayer::ChangeCamera(bool bOrigin)
+{
+	if (bOrigin)
+	{
+		Camera->Activate();
+		Camera2->Deactivate();
+	}
+	else
+	{
+		Camera->Deactivate();
+
+		float	z = Camera->GetComponentLocation().Z;
+		FVector location = Camera2->GetComponentLocation();
+		location.Z = z;
+		Camera2->SetWorldLocation(location);
+
+		float	 pitch = Camera->GetComponentRotation().Pitch;
+		FRotator rotation = Camera2->GetComponentRotation();
+		rotation.Pitch = pitch;
+		Camera2->SetWorldRotation(rotation);
+		Camera2->Activate();
+	}
 }
 
 void ACPlayer::DecreaseStamina(float InAmount)

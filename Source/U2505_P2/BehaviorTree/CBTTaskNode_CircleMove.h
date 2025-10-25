@@ -11,13 +11,19 @@ class U2505_P2_API UCBTTaskNode_CircleMove : public UCBTTaskNode
 
 private:
 	UPROPERTY(EditAnywhere)
+	FName TargetKey = "Target";
+
+	UPROPERTY(EditAnywhere)
+	FName ClockwiseKey = "bClockwise";
+
+	UPROPERTY(EditAnywhere)
+	FName RadiusKey = "Radius";
+
+	UPROPERTY(EditAnywhere)
 	float Degree = 20.0f;
 
 	UPROPERTY(EditAnywhere)
-	bool bClockwise;
-
-	UPROPERTY(EditAnywhere)
-	FName TargetKey = "Target";
+	FVector2D RadiusRange = FVector2D(150, 500);
 
 public:
 	UCBTTaskNode_CircleMove();
@@ -26,8 +32,4 @@ private:
 	EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 	void				TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds) override;
 	// EBTNodeResult::Type AbortTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-
-private:
-	float	  Radius = 0.0f;
-	FVector2D RadiusRange = FVector2D(150, 500);
 };

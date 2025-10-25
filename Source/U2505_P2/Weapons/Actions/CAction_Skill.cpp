@@ -22,11 +22,14 @@ void UCAction_Skill::Tick(float InDeltaTime)
 
 	CheckFalse(bMoving);
 
-	FVector location = OwnerCharacter->GetActorLocation();
-	location.Z = End.Z;
-	float radius = OwnerCharacter->GetCapsuleComponent()->GetScaledCapsuleRadius();
+	CheckNotValid(OwnerCharacter);
 
-	if (location.Equals(End, radius))
+	FVector location = OwnerCharacter->GetActorLocation();
+
+	FVector forward = OwnerCharacter->GetActorForwardVector().GetSafeNormal2D();
+	FVector toward = (End - location).GetSafeNormal2D();
+
+	if (!forward.Equals(toward, 10e-5))
 	{
 		bMoving = false;
 		Start = End = OwnerCharacter->GetActorLocation();
@@ -58,6 +61,8 @@ void UCAction_Skill::Begin_Action_Implementation()
 {
 	Super::Begin_Action_Implementation();
 
+	CheckNotValid(OwnerCharacter);
+
 	bMoving = true;
 
 	Start = OwnerCharacter->GetActorLocation();
@@ -70,12 +75,12 @@ void UCAction_Skill::Begin_Action_Implementation()
 	float height = OwnerCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 
 	TArray<AActor*> ignores;
-	ignores.Add(OwnerCharacter);
+	ignores.Add(OwnerCharacter.Get());
 
 	EDrawDebugTrace::Type type = bDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
 
 	FHitResult lineHitResult;
-	UKismetSystemLibrary::LineTraceSingle(OwnerCharacter->GetWorld(), Start, End, ETraceTypeQuery::TraceTypeQuery1, false, ignores, type, lineHitResult, true, FLinearColor::Blue);
+	UKismetSystemLibrary::LineTraceSingle(OwnerCharacter->GetWorld(), Start, End, TraceChannel, false, ignores, type, lineHitResult, true, FLinearColor::Blue);
 
 	if (lineHitResult.bBlockingHit)
 	{

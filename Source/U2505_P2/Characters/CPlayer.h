@@ -44,6 +44,12 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	class UCameraComponent* Camera;
 
+	UPROPERTY(VisibleAnywhere)
+	class USpringArmComponent* SpringArm2;
+
+	UPROPERTY(VisibleAnywhere)
+	class UCameraComponent* Camera2;
+
 private:
 	UPROPERTY(EditDefaultsOnly, Category = "Camera")
 	FVector2D PitchAngle = FVector2D(-40.0f, +40.0f);
@@ -63,6 +69,12 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	class UCStateComponent* State;
 
+	UPROPERTY(VisibleAnywhere)
+	class UCMouseComponent* Mouse;
+
+	UPROPERTY(VisibleAnywhere)
+	class UCTargetComponent* TargetComponent;
+
 private:
 	float KnockdownTime = 4.0f;
 
@@ -73,7 +85,14 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+public:
+	void Action_Pressed();
+	void Action2_Pressed();
 
 public:
 	float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
@@ -108,7 +127,6 @@ private:
 	void Damaged_Launch();
 	void Damaged_LookAt();
 
-
 public:
 	UFUNCTION()
 	void End_Dead() override;
@@ -133,6 +151,9 @@ public:
 	bool IsPosessable();
 	void Possess();
 	void DisPossess();
+
+public:
+	void ChangeCamera(bool bOrigin);
 
 public:
 	void DecreaseStamina(float InAmount);

@@ -18,18 +18,19 @@ void UCDoAction_DownStrike::Tick(float InDeltaTime)
 void UCDoAction_DownStrike::DoAction()
 {
 	CheckFalse(Datas.Num() > 0);
+	CheckNotValid(OwnerCharacter);
 
 	Super::DoAction();
 	// 인덱스가 0일땐 공중에 있어야함. 못해도 500으로 잡자.
 
 	if (Index == 0)
 	{
-		Datas[Index].DoAction(OwnerCharacter);
+		Datas[Index].DoAction(OwnerCharacter.Get());
 
-		OwnerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
-		OwnerCharacter->GetCharacterMovement()->Velocity = FVector::ZeroVector;
+		OwnerCharacter.Get()->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+		OwnerCharacter.Get()->GetCharacterMovement()->Velocity = FVector::ZeroVector;
 
-		UCWeaponComponent* weapon = FHelpers::GetComponent<UCWeaponComponent>(OwnerCharacter);
+		UCWeaponComponent* weapon = FHelpers::GetComponent<UCWeaponComponent>(OwnerCharacter.Get());
 		CheckNull(weapon);
 
 		ACAttachment* attachment = weapon->GetAttachment();
@@ -46,21 +47,23 @@ void UCDoAction_DownStrike::Begin_DoAction()
 	CheckFalse((int32)(Index + 1) < Datas.Num());
 	Index++;
 
-	Datas[Index].DoAction(OwnerCharacter);
+	Datas[Index].DoAction(OwnerCharacter.Get());
 
-	OwnerCharacter->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
-	OwnerCharacter->LaunchCharacter(FVector(0, 0, -FallingPower), true, true);
+	OwnerCharacter.Get()->GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	OwnerCharacter.Get()->LaunchCharacter(FVector(0, 0, -FallingPower), true, true);
 }
 
 void UCDoAction_DownStrike::End_DoAction()
 {
+	CheckNotValid(OwnerCharacter);
+
 	Super::End_DoAction();
 
-	Datas[Index].End_DoAction(OwnerCharacter);
+	Datas[Index].End_DoAction(OwnerCharacter.Get());
 
 	Index = 0;
 
-	UCWeaponComponent* weapon = FHelpers::GetComponent<UCWeaponComponent>(OwnerCharacter);
+	UCWeaponComponent* weapon = FHelpers::GetComponent<UCWeaponComponent>(OwnerCharacter.Get());
 	CheckNull(weapon);
 
 	ACAttachment* attachment = weapon->GetAttachment();
@@ -77,10 +80,10 @@ void UCDoAction_DownStrike::OnAttachmentEndCollision()
 
 void UCDoAction_DownStrike::OnAttachmentBeginOverlap(ACharacter* InAttacker, AActor* InAttackCauser, UShapeComponent* InAttackCollision, ACharacter* InOther)
 {
-	Super::OnAttachmentBeginOverlap(InAttacker, InAttackCauser, InAttackCollision, InOther);
-
-	CheckNull(OwnerCharacter);
+	CheckNotValid(OwnerCharacter);
 	CheckTrue(InOther == OwnerCharacter);
+
+	Super::OnAttachmentBeginOverlap(InAttacker, InAttackCauser, InAttackCollision, InOther);
 
 	// ActionType 검사
 	CheckFalse(IsValidActionType());
@@ -100,7 +103,7 @@ void UCDoAction_DownStrike::OnAttachmentBeginOverlap(ACharacter* InAttacker, AAc
 			defend->ParringActionData.DoAction(InOther);
 
 			// 패링 데미지 처리
-			defend->ParringDamagedData.SendDamage(InOther, InAttackCauser, InAttackCollision, OwnerCharacter);
+			defend->ParringDamagedData.SendDamage(InOther, InAttackCauser, InAttackCollision, OwnerCharacter.Get());
 			return;
 		}
 	}
@@ -113,5 +116,5 @@ void UCDoAction_DownStrike::OnAttachmentBeginOverlap(ACharacter* InAttacker, AAc
 	Hits.Add(InOther);
 
 	CheckFalse(DamagedDatas.Num() > 0); // 모션은 3개지만 피격은 하나로 처리
-	DamagedDatas[0].SendDamage(OwnerCharacter, InAttackCauser, InAttackCollision, InOther, bFirtHit);
+	DamagedDatas[0].SendDamage(OwnerCharacter.Get(), InAttackCauser, InAttackCollision, InOther, bFirtHit);
 }

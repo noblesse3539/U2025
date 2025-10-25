@@ -8,6 +8,10 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEquipmentBeginEquip);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FEquipmentUnequip);
 
+class ACharacter;
+class UCStateComponent;
+class UCMovementComponent;
+
 UCLASS()
 class U2505_P2_API UCEquipment : public UObject
 {
@@ -15,6 +19,8 @@ class U2505_P2_API UCEquipment : public UObject
 
 public:
 	void BeginPlay(class ACharacter* InOwnerCharacter, const FEquipmentData& InData);
+
+	virtual void BeginDestroy() override;
 
 public:
 	UFUNCTION(BlueprintNativeEvent)
@@ -41,7 +47,7 @@ private:
 	FEquipmentData Data;
 
 private:
-	class ACharacter*		   OwnerCharacter;
-	class UCStateComponent*	   State;
-	class UCMovementComponent* Movement;
+	TWeakObjectPtr<ACharacter>			OwnerCharacter;
+	TWeakObjectPtr<UCStateComponent>	State;
+	TWeakObjectPtr<UCMovementComponent> Movement;
 };

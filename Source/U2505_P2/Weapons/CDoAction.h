@@ -5,19 +5,27 @@
 #include "CWeaponStructures.h"
 #include "CDoAction.generated.h"
 
+class UCStateComponent;
+class ACAttachment;
+class UCWeaponTraceComponent;
+
 UCLASS(Abstract)
 class U2505_P2_API UCDoAction : public UObject
 {
 	GENERATED_BODY()
 
 public:
+	virtual void BeginDestroy() override;
+
+public:
 	virtual void BeginPlay(
-		class ACharacter*			InOwnerCharacter,
-		class ACAttachment*			InAttachment,
-		class UCEquipment*			InEquipment,
-		const TArray<FDoActionData> InDatas,
-		const TArray<FDamagedData>	InDamagedDatas,
-		const EActionType			InActionType);
+		class ACharacter*			  InOwnerCharacter,
+		class ACAttachment*			  InAttachment,
+		class UCEquipment*			  InEquipment,
+		class UCWeaponTraceComponent* InWeaponTrace,
+		const TArray<FDoActionData>	  InDatas,
+		const TArray<FDamagedData>	  InDamagedDatas,
+		const EActionType			  InActionType);
 
 	virtual void Tick(float InDeltaTime) {}
 
@@ -31,14 +39,18 @@ public:
 	FORCEINLINE TArray<FDamagedData> GetDamagedDatas() { return DamagedDatas; }
 
 protected:
-	class ACharacter* OwnerCharacter;
-	class UWorld*	  World;
+	TWeakObjectPtr<ACharacter>			   OwnerCharacter;
+	TWeakObjectPtr<ACAttachment>		   Attachment;
+	TWeakObjectPtr<UCEquipment>			   Equipment;
+	TWeakObjectPtr<UCWeaponTraceComponent> WeaponTrace;
+
+	class UWorld* World;
 
 	TArray<FDoActionData> Datas;
 	TArray<FDamagedData>  DamagedDatas;
 
 protected:
-	class UCStateComponent* State;
+	TWeakObjectPtr<UCStateComponent> State;
 
 public:
 	UFUNCTION()
@@ -53,8 +65,7 @@ public:
 	UFUNCTION()
 	virtual void OnAttachmentEndOverlap(class ACharacter* InAttacker, class ACharacter* InOther) {}
 
-
-// 파생에서 사용할 체크 함수들
+	// 파생에서 사용할 체크 함수들
 protected:
 	virtual bool IsValidActionType();
 	virtual bool IsValidTeam(class ACharacter* InOther);

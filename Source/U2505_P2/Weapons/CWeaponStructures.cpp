@@ -28,8 +28,8 @@ void FDoActionData::DoAction(ACharacter* InOwnerCharacter)
 		InOwnerCharacter->PlayAnimMontage(Montage, PlayRate);
 	}
 
-	
-	if (Cost > 0.0f) {
+	if (Cost > 0.0f)
+	{
 		ACPlayer* player = Cast<ACPlayer>(InOwnerCharacter);
 		CheckNull(player);
 
@@ -99,10 +99,19 @@ void FDamagedData::PlayHitStop(ACharacter* InOwnerCharacter, ACharacter* InAttac
 	InOwnerCharacter->CustomTimeDilation = 1e-3f;
 	InAttacker->CustomTimeDilation = 1e-3f;
 
+	TWeakObjectPtr<ACharacter> weakOwner = InOwnerCharacter;
+	TWeakObjectPtr<ACharacter> weakAttacker = InAttacker;
+
 	FTimerDelegate timerDelegate;
-	timerDelegate.BindLambda([=]() {
-		InOwnerCharacter->CustomTimeDilation = 1.0f;
-		InAttacker->CustomTimeDilation = 1.0f;
+	timerDelegate.BindLambda([weakOwner, weakAttacker]() {
+		if (weakOwner.IsValid())
+		{
+			weakOwner->CustomTimeDilation = 1.0f;
+		}
+		if (weakAttacker.IsValid())
+		{
+			weakAttacker->CustomTimeDilation = 1.0f;
+		}
 	});
 
 	FTimerHandle handle;

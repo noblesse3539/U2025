@@ -22,36 +22,33 @@ UCWeaponAsset::UCWeaponAsset()
 
 void UCWeaponAsset::BeginPlay(UCWeaponComponent* InOwnerWeapon, ACharacter* InOwnerCharacter, FWeaponData& InWeaponData)
 {
-	if (!!AttachmentClass)
-	{
-		FActorSpawnParameters params;
-		params.Owner = InOwnerCharacter;
-		params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-		InWeaponData.Attachment = InOwnerCharacter->GetWorld()->SpawnActor<ACAttachment>(AttachmentClass, params);
-
-		if (!!SubAttachmentClass)
-		{
-			InWeaponData.SubAttachment = InOwnerCharacter->GetWorld()->SpawnActor<ACAttachment>(SubAttachmentClass, params);
-		}
-	}
-
 	if (!!EquipmentClass)
 	{
 		InWeaponData.Equipment = NewObject<UCEquipment>(InOwnerWeapon, EquipmentClass);
 		CheckNull(InWeaponData.Equipment);
 
 		InWeaponData.Equipment->BeginPlay(InOwnerCharacter, EquipmentData);
+	}
 
+	if (!!AttachmentClass)
+	{
+		FTransform transform;
+		InWeaponData.Attachment = InOwnerCharacter->GetWorld()->SpawnActorDeferred<ACAttachment>(AttachmentClass, transform, InOwnerCharacter, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (!!InWeaponData.Attachment)
 		{
-			InWeaponData.Equipment->OnEquipmentBeginEquip.AddDynamic(InWeaponData.Attachment, &ACAttachment::OnEquipmentBeginEquip);
-			InWeaponData.Equipment->OnEquipmentUnequip.AddDynamic(InWeaponData.Attachment, &ACAttachment::OnEquipmentUnequip);
+			InWeaponData.Attachment->SetEquipment(InWeaponData.Equipment);
 
+			InWeaponData.Attachment->FinishSpawning(transform);
+		}
+
+		if (!!SubAttachmentClass)
+		{
+			InWeaponData.SubAttachment = InOwnerCharacter->GetWorld()->SpawnActorDeferred<ACAttachment>(SubAttachmentClass, transform, InOwnerCharacter, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 			if (!!InWeaponData.SubAttachment)
 			{
-				InWeaponData.Equipment->OnEquipmentBeginEquip.AddDynamic(InWeaponData.SubAttachment, &ACAttachment::OnEquipmentBeginEquip);
-				InWeaponData.Equipment->OnEquipmentUnequip.AddDynamic(InWeaponData.SubAttachment, &ACAttachment::OnEquipmentUnequip);
+				InWeaponData.SubAttachment->SetEquipment(InWeaponData.Equipment);
+
+				InWeaponData.SubAttachment->FinishSpawning(transform);
 			}
 		}
 	}

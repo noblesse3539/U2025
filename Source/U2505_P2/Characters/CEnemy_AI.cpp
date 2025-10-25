@@ -31,16 +31,16 @@ void ACEnemy_AI::OnStateTypeChanged(EStateType InPrevType, EStateType InNewType)
 	{
 		case EStateType::Idle:
 		case EStateType::Max:
-			blackboard->SetValueAsEnum("AIState", (uint8)EAIStateType::Max);
+			blackboard->SetValueAsEnum(AIStateKey, (uint8)EAIStateType::Max);
 			break;
 		case EStateType::Damaged:
-			blackboard->SetValueAsEnum("AIState", (uint8)EAIStateType::Damaged);
+			blackboard->SetValueAsEnum(AIStateKey, (uint8)EAIStateType::Damaged);
 			break;
 		case EStateType::Knockdown:
-			blackboard->SetValueAsEnum("AIState", (uint8)EAIStateType::Knockdown);
+			blackboard->SetValueAsEnum(AIStateKey, (uint8)EAIStateType::Knockdown);
 			break;
 		case EStateType::Dead:
-			blackboard->SetValueAsEnum("AIState", (uint8)EAIStateType::Dead);
+			blackboard->SetValueAsEnum(AIStateKey, (uint8)EAIStateType::Dead);
 			break;
 	}
 

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "BehaviorTree/CBTTaskNode.h"
+#include "Characters/CStateStructures.h"
 #include "CBTTaskNode_Speed.generated.h"
 
 UCLASS()

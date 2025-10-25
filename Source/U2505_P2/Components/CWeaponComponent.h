@@ -18,11 +18,16 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TMap<EWeaponType, class UCWeaponAsset*> DataAssetTable;
 
+private:
+	UPROPERTY(EditAnywhere, Category = "Debug")
+	bool bDebugCamera = false;
+
 public:
 	UCWeaponComponent();
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -32,6 +37,18 @@ public:
 	FORCEINLINE EActionType GetActionType() { return CurrentActionType; }
 	FORCEINLINE EWeaponType GetWeaponType() { return CurrentType; }
 	FORCEINLINE bool		IsEquipping() { return bEquipping == true; }
+
+public:
+	FORCEINLINE bool IsBowstring() { return bBowstring; }
+	FORCEINLINE void OnBowstring() { bBowstring = true; }
+	FORCEINLINE void OffBowstring() { bBowstring = false; }
+
+	FORCEINLINE bool IsPullBowstring() { return bPullBowstring; }
+	FORCEINLINE void OnPullBowstring() { bPullBowstring = true; }
+	FORCEINLINE void OffPullBowstring() { bPullBowstring = false; }
+
+public:
+	FORCEINLINE bool IsDebugCamera() { return bDebugCamera; }
 
 public:
 	bool IsParry();
@@ -93,6 +110,8 @@ public:
 	void SetHammerMode();
 	void SetAxeMode();
 	void SetKatanaMode();
+	void SetMagicMode();
+	void SetBowMode();
 
 private:
 	void SetMode(EWeaponType InType);
@@ -128,6 +147,9 @@ public:
 public:
 	void AttachTo(FName InSocketName);
 
+public:
+	void GetWeaponSocketLocation(FName InSocketName, FVectorData& OutLocationData);
+
 private:
 	UFUNCTION()
 	void OnStateTypeChanged(EStateType InPrevType, EStateType InNewType);
@@ -155,4 +177,7 @@ private:
 	bool  bCharge;
 
 	bool bEquipping;
+
+	bool bBowstring;
+	bool bPullBowstring;
 };

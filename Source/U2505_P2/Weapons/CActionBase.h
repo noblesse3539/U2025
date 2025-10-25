@@ -5,6 +5,9 @@
 #include "Weapons/CWeaponStructures.h"
 #include "CActionBase.generated.h"
 
+class UCStateComponent;
+class ACharacter;
+
 UCLASS(Abstract, NotBlueprintable)
 class U2505_P2_API UCActionBase : public UObject
 {
@@ -28,6 +31,9 @@ public:
 	virtual void Tick(float InDeltaTime) {}
 
 public:
+	virtual void BeginDestroy() override;
+
+public:
 	virtual void Pressed();
 	virtual void Released();
 
@@ -41,7 +47,7 @@ public:
 	virtual void End_Action_Implementation() {}
 
 public:
-	FORCEINLINE UCDoAction* GetDoAction() { return DoAction; }
+	FORCEINLINE class UCDoAction* GetDoAction() { return DoAction; }
 
 protected:
 	UFUNCTION()
@@ -50,13 +56,12 @@ protected:
 protected:
 	bool bInAction;
 
-	class ACharacter* OwnerCharacter;
+	TWeakObjectPtr<ACharacter> OwnerCharacter;
 
 	class ACAttachment* Attachment;
 
 	UPROPERTY()
 	class UCDoAction* DoAction;
 
-	class UCStateComponent*	   State;
-	class UCMovementComponent* Movement;
+	TWeakObjectPtr<UCStateComponent> State;
 };

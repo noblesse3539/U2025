@@ -29,7 +29,6 @@ void UCBTService_Combat::OnSearchStart(FBehaviorTreeSearchData& SearchData)
 		case 4:
 		case 5:
 		case 6:
-		case 7:
 		{
 			// 만약 타겟을 공격중인 적이 많을경우 CircleMove로
 			ACPlayer* player = Cast<ACPlayer>(blackboard->GetValueAsObject(TargetKey));
@@ -51,6 +50,7 @@ void UCBTService_Combat::OnSearchStart(FBehaviorTreeSearchData& SearchData)
 			blackboard->SetValueAsEnum(AIStateKey, (uint8)EAIStateType::Action);
 			break;
 		}
+		case 7:
 		case 8:
 		{
 			blackboard->SetValueAsEnum(AIStateKey, (uint8)EAIStateType::Defend);

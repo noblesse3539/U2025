@@ -3,13 +3,22 @@
 #include "GameFramework/Character.h"
 
 #include "Components/CStateComponent.h"
-#include "Components/CMovementComponent.h"
 
 #include "Weapons/CAttachment.h"
 #include "Weapons/CDoAction.h"
 
 UCAction_Defend::UCAction_Defend()
 {
+}
+
+void UCAction_Defend::BeginDestroy()
+{
+
+	if (OwnerCharacter.IsValid())
+	{
+		FHelpers::ClearTimer(OwnerCharacter->GetWorld(), Handle_Parry);
+	}
+	Super::BeginDestroy();
 }
 
 void UCAction_Defend::Pressed()
@@ -30,11 +39,11 @@ void UCAction_Defend::OnStateTypeChanged(EStateType InPrevType, EStateType InNew
 {
 	switch (InPrevType)
 	{
-	case EStateType::Defend:
-	{
-		bParry = false;
-		break;
-	}
+		case EStateType::Defend:
+		{
+			bParry = false;
+			break;
+		}
 	}
 
 	switch (InNewType)
@@ -42,10 +51,19 @@ void UCAction_Defend::OnStateTypeChanged(EStateType InPrevType, EStateType InNew
 		case EStateType::Defend:
 		{
 			bParry = true;
+			if (OwnerCharacter.IsValid())
+			{
+				FTimerDelegate parryTimer = FTimerDelegate::CreateWeakLambda(this, [this]() {
+					ExpireParry();
+				});
 
-			FTimerDelegate parryTimer = FTimerDelegate::CreateUObject(this, &UCAction_Defend::ExpireParry);
-			GetWorld()->GetTimerManager().SetTimer(Handle_Parry, parryTimer, ParryDuration, false);
-			break;
+				UWorld* world = OwnerCharacter->GetWorld();
+				if (!IsValid(world))
+					break;
+
+				world->GetTimerManager().SetTimer(Handle_Parry, parryTimer, ParryDuration, false);
+				break;
+			}
 		}
 	}
 
@@ -54,14 +72,14 @@ void UCAction_Defend::OnStateTypeChanged(EStateType InPrevType, EStateType InNew
 
 void UCAction_Defend::OnDefend()
 {
-	CheckNull(State);
+	CheckNotValid(State);
 
 	State->SetDefendMode();
 }
 
 void UCAction_Defend::OffDefend()
 {
-	CheckNull(State);
+	CheckNotValid(State);
 
 	State->SetIdleMode();
 }

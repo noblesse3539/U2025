@@ -7,6 +7,8 @@
 
 #include "CSquad.generated.h"
 
+class IISquadable;
+
 UCLASS()
 class U2505_P2_API ACSquad : public AActor
 {
@@ -40,8 +42,11 @@ public:
 	void OrderMembers(ACSquad* InTargetSquad);
 
 public:
-	UPROPERTY()
-	TArray<class IISquadable*> Members;
+	TArray<TWeakInterfacePtr<IISquadable>> Members;
 
 	float SpawnDist = 200.0f; // 스폰 시 캐릭터 간 간격
+
+public:
+	UFUNCTION()
+	void OnDestroyed(AActor* DestroyedActor);
 };

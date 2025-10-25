@@ -3,7 +3,9 @@
 #include "GameFramework/Character.h"
 #include "Components/SceneComponent.h"
 #include "Components/ShapeComponent.h"
+#include "Components/CWeaponComponent.h"
 #include "Components/CWeaponTraceComponent.h"
+#include "Weapons/CEquipment.h"
 
 ACAttachment::ACAttachment()
 {
@@ -11,14 +13,16 @@ ACAttachment::ACAttachment()
 	FHelpers::CreateActorComponent<UCWeaponTraceComponent>(this, &WeaponTrace, "WeaponTrace");
 }
 
- void ACAttachment::BeginPlay()
+void ACAttachment::BeginPlay()
 {
+	Super::BeginPlay();
+
 	OwnerCharacter = Cast<ACharacter>(GetOwner());
 
 	TArray<USceneComponent*> children;
 	Root->GetChildrenComponents(true, children);
 
-	 for (USceneComponent* child : children)
+	for (USceneComponent* child : children)
 	{
 		UShapeComponent* shape = Cast<UShapeComponent>(child);
 		if (shape == nullptr)
@@ -32,36 +36,43 @@ ACAttachment::ACAttachment()
 
 	OffCollision();
 
-	Super::BeginPlay();
- }
+	if (Equipment.IsValid())
+	{
+		Equipment->OnEquipmentBeginEquip.AddDynamic(this, &ACAttachment::OnEquipmentBeginEquip);
+		Equipment->OnEquipmentUnequip.AddDynamic(this, &ACAttachment::OnEquipmentUnequip);
+	}
+}
 
-//void ACAttachment::BeginPlay()
-//{
-//	OwnerCharacter = Cast<ACharacter>(GetOwner());
-//
-//	TArray<USceneComponent*> children;
-//	Root->GetChildrenComponents(false, children);
-//
-//	for (USceneComponent* child : children)
-//	{
-//		UShapeComponent* shape = Cast<UShapeComponent>(child);
-//
-//		if (!!shape && shape->GetName() == "Capsule")
-//		{
-//			shape->OnComponentBeginOverlap.AddDynamic(this, &ACAttachment::OnComponentBeginOverlap);
-//			shape->OnComponentEndOverlap.AddDynamic(this, &ACAttachment::OnComponentEndOverlap);
-//			Collisions.Add(shape);
-//			break;
-//		}
-//	}
-//
-//	OffCollision();
-//
-//	Super::BeginPlay();
-//}
+void ACAttachment::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+
+	OnAttachmentBeginCollision.RemoveAll(this);
+	OnAttachmentEndCollision.RemoveAll(this);
+
+	OnAttachmentBeginOverlap.RemoveAll(this);
+	OnAttachmentEndOverlap.RemoveAll(this);
+
+	for (UShapeComponent* shape : Collisions)
+	{
+		if (!IsValid(shape))
+			continue;
+
+		shape->OnComponentBeginOverlap.RemoveDynamic(this, &ACAttachment::OnComponentBeginOverlap);
+		shape->OnComponentEndOverlap.RemoveDynamic(this, &ACAttachment::OnComponentEndOverlap);
+	}
+
+	if (Equipment.IsValid())
+	{
+		Equipment->OnEquipmentBeginEquip.RemoveDynamic(this, &ACAttachment::OnEquipmentBeginEquip);
+		Equipment->OnEquipmentUnequip.RemoveDynamic(this, &ACAttachment::OnEquipmentUnequip);
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
 
 void ACAttachment::AttachTo(FName InSocketName)
 {
+	CheckNull(OwnerCharacter);
 	FHelpers::AttachTo(this, OwnerCharacter->GetMesh(), InSocketName);
 }
 
@@ -76,6 +87,11 @@ void ACAttachment::AttachToCollision(FName InCollisionName)
 			return;
 		}
 	}
+}
+
+void ACAttachment::SetEquipment(UCEquipment* InEquipment)
+{
+	Equipment = InEquipment;
 }
 
 void ACAttachment::OnComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

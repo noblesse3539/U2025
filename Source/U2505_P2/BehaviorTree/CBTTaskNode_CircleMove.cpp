@@ -21,18 +21,16 @@ EBTNodeResult::Type UCBTTaskNode_CircleMove::ExecuteTask(UBehaviorTreeComponent&
 {
 	Super::ExecuteTask(OwnerComp, NodeMemory);
 
-	bClockwise = UKismetMathLibrary::RandomBool();
+	UBlackboardComponent* blackboard = OwnerComp.GetBlackboardComponent();
+	CheckNullResult(blackboard, EBTNodeResult::Failed);
 
-	if (bClockwise)
-	{
-		Degree = -1 * abs(Degree);
-	}
-	else
-	{
-		Degree = abs(Degree);
-	}
+	bool bClockwise = UKismetMathLibrary::RandomBool();
+	blackboard->SetValueAsBool(ClockwiseKey, UKismetMathLibrary::RandomBool());
 
-	Radius = UKismetMathLibrary::RandomFloatInRange(RadiusRange.X, RadiusRange.Y);
+	float degree = abs(Degree);
+
+	float radius = UKismetMathLibrary::RandomFloatInRange(RadiusRange.X, RadiusRange.Y);
+	blackboard->SetValueAsFloat(RadiusKey, radius);
 
 	return EBTNodeResult::InProgress;
 }
@@ -48,7 +46,9 @@ void UCBTTaskNode_CircleMove::TickTask(UBehaviorTreeComponent& OwnerComp, uint8*
 	CheckNull(ai);
 
 	UBlackboardComponent* blackboard = OwnerComp.GetBlackboardComponent();
-	ACharacter*			  target = Cast<ACharacter>(blackboard->GetValueAsObject(TargetKey));
+	CheckNull(blackboard);
+
+	ACharacter* target = Cast<ACharacter>(blackboard->GetValueAsObject(TargetKey));
 
 	CheckNull(target);
 
@@ -56,7 +56,16 @@ void UCBTTaskNode_CircleMove::TickTask(UBehaviorTreeComponent& OwnerComp, uint8*
 	FVector	 aiLocation = ai->GetActorLocation();
 	FRotator rotator = UKismetMathLibrary::FindLookAtRotation(targetLocation, aiLocation);
 
-	FVector dest = targetLocation + (UKismetMathLibrary::CreateVectorFromYawPitch((rotator.Yaw + Degree), 0.0f, 1.0f) * Radius);
+	bool bClockwise = blackboard->GetValueAsBool(ClockwiseKey);
+
+	float degree = abs(Degree);
+	if (bClockwise == false)
+	{
+		degree = -degree;
+	}
+
+	float	radius = blackboard->GetValueAsFloat(RadiusKey);
+	FVector dest = targetLocation + (UKismetMathLibrary::CreateVectorFromYawPitch((rotator.Yaw + degree), 0.0f, 1.0f) * radius);
 
 	controller->MoveToLocation(dest, 0.3f, false);
 

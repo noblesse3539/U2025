@@ -20,7 +20,6 @@ FString UCAnimNotify_DoAction::GetNotifyName_Implementation() const
 void UCAnimNotify_DoAction::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	Super::Notify(MeshComp, Animation, EventReference);
-
 	UCWeaponComponent* weapon = GetWeaponComponent(MeshComp);
 	CheckNull(weapon);
 

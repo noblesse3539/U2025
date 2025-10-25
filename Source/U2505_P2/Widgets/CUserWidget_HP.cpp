@@ -2,6 +2,18 @@
 #include "Global.h"
 #include "GameFramework/PlayerController.h"
 
+void UCUserWidget_HP::BeginDestroy()
+{
+	APlayerController* player = GetOwningPlayer();
+	if (IsValid(player))
+	{
+		FHelpers::ClearTimer(player->GetWorld(), Handle_healthTail);
+		FHelpers::ClearTimer(player->GetWorld(), Handle_Recovery);
+	}
+
+	Super::BeginDestroy();
+}
+
 void UCUserWidget_HP::NativeOnInitialized()
 {
 	HealthPoint = MaxHealthPoint;
@@ -45,8 +57,11 @@ void UCUserWidget_HP::Damage(float InAmount)
 	CheckNull(player);
 	CheckTrue(bCanUpdateHealthTail);
 
-	FTimerDelegate healthTaileTimer = FTimerDelegate::CreateUObject(this, &UCUserWidget_HP::OnCanUpdateHealthTail);
-	player->GetWorld()->GetTimerManager().SetTimer(Handle_healthTail, healthTaileTimer, Delay_TailTimer, false);
+	FTimerDelegate timerDelegate = FTimerDelegate::CreateWeakLambda(this, [this]() {
+		OnCanUpdateHealthTail();
+	});
+
+	player->GetWorld()->GetTimerManager().SetTimer(Handle_healthTail, timerDelegate, Delay_TailTimer, false);
 }
 
 void UCUserWidget_HP::DecreaseStamina(float InAmount)
@@ -60,8 +75,12 @@ void UCUserWidget_HP::DecreaseStamina(float InAmount)
 	CheckNull(player);
 
 	OffCanRecovery();
-	FTimerDelegate recoveryTimer = FTimerDelegate::CreateUObject(this, &UCUserWidget_HP::OnCanRecovery);
-	player->GetWorld()->GetTimerManager().SetTimer(Handle_Recovery, recoveryTimer, Delay_RecoveryTimer, false);
+
+	FTimerDelegate timerDelegate = FTimerDelegate::CreateWeakLambda(this, [this]() {
+		OnCanRecovery();
+	});
+
+	player->GetWorld()->GetTimerManager().SetTimer(Handle_Recovery, timerDelegate, Delay_RecoveryTimer, false);
 }
 
 void UCUserWidget_HP::TickHealthTail(float InDeltaTime)

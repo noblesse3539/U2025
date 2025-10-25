@@ -9,7 +9,7 @@ UCLASS(Blueprintable)
 class U2505_P2_API UCAction_Defend : public UCActionBase
 {
 	GENERATED_BODY()
-	
+
 public:
 	UPROPERTY(EditAnywhere, Category = "Montages")
 	class UAnimMontage* DefendMontage;
@@ -25,6 +25,9 @@ public:
 
 public:
 	UCAction_Defend();
+
+public:
+	virtual void BeginDestroy() override;
 
 public:
 	void Pressed() override;

@@ -34,7 +34,24 @@ enum class EWeaponType : uint8
 	Hammer,
 	Axe,
 	Katana,
+	Magic,
+	Bow,
 	Max,
+};
+
+USTRUCT(BlueprintType)
+struct FVectorData
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bChecked = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector V = FVector::ZeroVector;
+
+public:
+	operator FVector() { return V; }
 };
 
 USTRUCT()

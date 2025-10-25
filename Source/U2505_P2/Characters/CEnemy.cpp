@@ -34,6 +34,9 @@ ACEnemy::ACEnemy()
 	GetMesh()->SetRelativeRotation(FRotator(0, -90, 0));
 	GetMesh()->SetRelativeScale3D(FVector(0.8f, 0.8f, 0.8f));
 
+	// Highlight setting
+	FHelpers::GetAsset(&HighlightMaterial, "/Script/Engine.MaterialInstanceConstant'/Game/Materials/M_ActorHighlight_Inst.M_ActorHighlight_Inst'");
+
 	GetCapsuleComponent()->SetCapsuleHalfHeight(100);
 
 	TSubclassOf<UCAnimInstance> animInstance;
@@ -43,9 +46,21 @@ ACEnemy::ACEnemy()
 
 void ACEnemy::BeginPlay()
 {
+	Super::BeginPlay();
+
+	CheckNull(State);
 	State->OnStateTypeChanged.AddDynamic(this, &ACEnemy::OnStateTypeChanged);
 
-	Super::BeginPlay();
+	CheckNull(Weapon);
+	Weapon->OnWeaponTypeChanged.AddDynamic(this, &ACEnemy::OnWeaponTypeChanged);
+
+	InitOverlayMaterial();
+
+	TArray<UMaterialInterface*> materials = GetMesh()->GetMaterials();
+	for (int i = 0; i < materials.Num(); i++)
+	{
+		FString s = i + " " + materials[i]->GetName();
+	}
 
 	StartLocation = GetActorLocation();
 
@@ -86,47 +101,47 @@ void ACEnemy::BeginPlay()
 				{
 					State_Widget->SetVisibility(false);
 				}
-
-				CheckNull(Weapon);
-				Weapon->OnWeaponTypeChanged.AddDynamic(this, &ACEnemy::OnWeaponTypeChanged);
 			}
 		}
 	}
-	// HP_Widget = FHelpers::GetComponent<UWidgetComponent>(this);
-	// CheckNull(HP_Widget);
+}
 
-	// UUserWidget* widget = HP_Widget->GetUserWidgetObject();
-	// HealthPoint = Cast<UCUserWidget_HP>(widget);
+void ACEnemy::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (!!State)
+		State->OnStateTypeChanged.RemoveDynamic(this, &ACEnemy::OnStateTypeChanged);
 
-	// HP_Widget = FHelpers::GetComponent<UWidgetComponent>(this);
-	// CheckNull(HP_Widget);
+	if (!!Weapon)
+		Weapon->OnWeaponTypeChanged.RemoveDynamic(this, &ACEnemy::OnWeaponTypeChanged);
 
-	// UUserWidget* widget = HP_Widget->GetUserWidgetObject();
-	// HealthPoint = Cast<UCUserWidget_HP>(widget);
+	FHelpers::ClearTimer(GetWorld(), Handle_Knockdown);
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void ACEnemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	APlayerCameraManager* cameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
+	CheckNull(cameraManager);
+
 	// 위젯 방향을 플레이어의 카메라의 정면 방향으로 고정
-	if (IsValid(HP_Widget))
+	if (HP_Widget.IsValid())
 	{
 		FTransform transform = HP_Widget->GetComponentTransform();
 
-		APlayerCameraManager* cameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
-		FVector				  cameraLocation = cameraManager->GetTransformComponent()->GetComponentLocation();
+		FVector cameraLocation = cameraManager->GetCameraLocation();
 
 		FRotator rotator = UKismetMathLibrary::FindLookAtRotation(transform.GetLocation(), cameraLocation);
 		HP_Widget->SetWorldRotation(rotator);
 	}
 
-	if (IsValid(State_Widget))
+	if (State_Widget.IsValid())
 	{
 		FTransform transform = State_Widget->GetComponentTransform();
 
-		APlayerCameraManager* cameraManager = UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0);
-		FVector				  cameraLocation = cameraManager->GetTransformComponent()->GetComponentLocation();
+		FVector cameraLocation = cameraManager->GetCameraLocation();
 
 		FRotator rotator = UKismetMathLibrary::FindLookAtRotation(transform.GetLocation(), cameraLocation);
 		State_Widget->SetWorldRotation(rotator);
@@ -135,6 +150,8 @@ void ACEnemy::Tick(float DeltaTime)
 
 float ACEnemy::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	CheckNullResult(State, 0);
+
 	if (State->IsDefendMode())
 	{
 		DamageAmount *= DefenceDamageReduceRate;
@@ -185,22 +202,24 @@ void ACEnemy::OnStateTypeChanged(EStateType InPrevType, EStateType InNewType)
 
 	if (bDebug)
 	{
+		CheckNull(StateForDebug);
 		StateForDebug->UpdateState(InNewType);
 	}
 }
 
 void ACEnemy::Damage()
 {
-	if (!!Movement)
+	CheckNull(State);
+
+	if (!!Movement && !State->IsDefendMode())
 	{
 		Movement->Stop();
 	}
+
+	CheckNotValid(HealthPoint);
 	// Apply Damage
-	if (!!HealthPoint)
-	{
-		HealthPoint->Damage(TakeDamagedData.Power);
-		TakeDamagedData.Power = 0.0f;
-	}
+	HealthPoint->Damage(TakeDamagedData.Power);
+	TakeDamagedData.Power = 0.0f;
 
 	if (!!TakeDamagedData.Event && !!TakeDamagedData.Event->DamagedData)
 	{
@@ -241,16 +260,14 @@ void ACEnemy::Dead()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	// GetCapsuleComponent()->SetCollisionProfileName("Dead"); // TODO 바닥이 월드다이나믹인데 무기도 월드다이나믹임.. 해결하기 전까지 사용 X
 
-	if (!!HP_Widget)
+	if (HP_Widget.IsValid())
 	{
 		HP_Widget->DestroyComponent();
-		HP_Widget = nullptr;
 	}
 
-	if (!!State_Widget)
+	if (State_Widget.IsValid())
 	{
 		State_Widget->DestroyComponent();
-		State_Widget = nullptr;
 	}
 
 	if (!!DeadMontage)
@@ -261,7 +278,11 @@ void ACEnemy::Dead()
 	}
 
 	// 몽타주가 존재하지 않아도 End_Dead를 호출해 객체 소멸
-	FTimerDelegate timerDelegate = FTimerDelegate::CreateUObject(this, &ACEnemy::End_Dead);
+	// FTimerDelegate timerDelegate = FTimerDelegate::CreateUObject(this, &ACEnemy::End_Dead);
+
+	FTimerDelegate timerDelegate = FTimerDelegate::CreateWeakLambda(this, [this]() {
+		End_Dead();
+	});
 
 	FTimerHandle handle;
 	GetWorld()->GetTimerManager().SetTimer(handle, timerDelegate, 0.2f, false);
@@ -270,19 +291,27 @@ void ACEnemy::Dead()
 void ACEnemy::Knockdown()
 {
 	// 넉다운으로 상태 변경 시 이미 땅일 경우 타임 델리게이트 세팅
-	if (GetCharacterMovement()->IsMovingOnGround())
-	{
-		FTimerDelegate timerDelegate = FTimerDelegate::CreateUObject(this, &ACEnemy::End_Knockdown);
-		if (!GetWorld()->GetTimerManager().IsTimerActive(Handle_Knockdown))
-		{
-			GetWorld()->GetTimerManager().SetTimer(Handle_Knockdown, timerDelegate, KnockdownTime, false);
-		}
-	}
+	UCharacterMovementComponent* movement = GetCharacterMovement();
+	CheckNull(movement);
+
+	CheckFalse(movement->IsMovingOnGround());
+
+	UWorld* world = GetWorld();
+	CheckNull(world);
+
+	CheckTrue(world->GetTimerManager().IsTimerActive(Handle_Knockdown));
+
+	FTimerDelegate timerDelegate = FTimerDelegate::CreateWeakLambda(this, [this]() {
+		End_Knockdown();
+	});
+	GetWorld()->GetTimerManager().SetTimer(Handle_Knockdown, timerDelegate, KnockdownTime, false);
 }
 
 // 피격 몽타주 재생 (디펜드 or 피격)
 void ACEnemy::Damaged_PlayMontage()
 {
+	CheckNull(State);
+
 	if (State->IsDefendMode())
 	{
 		CheckNull(Weapon);
@@ -304,7 +333,8 @@ void ACEnemy::Damaged_PlayMontage()
 void ACEnemy::Damaged_PlayEffect()
 {
 	FDamagedData* data = TakeDamagedData.Event->DamagedData;
-	FVector		  effectLocation = GetActorLocation();
+	CheckNull(data);
+	FVector effectLocation = GetActorLocation();
 
 	UShapeComponent* collision = TakeDamagedData.Event->Collision;
 	if (!!collision)
@@ -321,6 +351,8 @@ void ACEnemy::Damaged_PlayEffect()
 void ACEnemy::Damaged_PlayHisStop()
 {
 	FDamagedData* data = TakeDamagedData.Event->DamagedData;
+	CheckNull(data);
+
 	if (TakeDamagedData.Event->bFirstHit)
 	{
 		data->PlayHitStop(this, TakeDamagedData.Attacker);
@@ -331,6 +363,8 @@ void ACEnemy::Damaged_PlayHisStop()
 void ACEnemy::Damaged_PlayCameraShake()
 {
 	FDamagedData* data = TakeDamagedData.Event->DamagedData;
+	CheckNull(data);
+
 	if (TakeDamagedData.Event->bFirstHit)
 	{
 		data->PlayCameraShake(GetWorld());
@@ -341,6 +375,8 @@ void ACEnemy::Damaged_PlayCameraShake()
 void ACEnemy::Damaged_PlaySound()
 {
 	FDamagedData* data = TakeDamagedData.Event->DamagedData;
+	CheckNull(data);
+
 	if (TakeDamagedData.Event->bFirstHit)
 	{
 		data->PlaySound(this);
@@ -350,10 +386,14 @@ void ACEnemy::Damaged_PlaySound()
 // 피격 시 날아감
 void ACEnemy::Damaged_Launch()
 {
+	CheckNull(State);
+
 	FDamagedData* data = TakeDamagedData.Event->DamagedData;
-	FVector		  start = GetActorLocation();
-	FVector		  target = TakeDamagedData.Attacker->GetActorLocation();
-	FVector		  direction = start - target;
+	CheckNull(data);
+
+	FVector start = GetActorLocation();
+	FVector target = TakeDamagedData.Attacker->GetActorLocation();
+	FVector direction = start - target;
 	direction.Normalize();
 
 	if (!State->IsDefendMode())
@@ -418,11 +458,11 @@ void ACEnemy::End_Dead()
 
 	SetActorTickEnabled(false);
 	{
-		if (IsValid(HP_Widget))
+		if (HP_Widget.IsValid())
 		{
 			HP_Widget->SetVisibility(false);
 		}
-		if (IsValid(State_Widget))
+		if (State_Widget.IsValid())
 		{
 			State_Widget->SetVisibility(false);
 		}
@@ -440,11 +480,13 @@ void ACEnemy::End_Damaged()
 		Movement->Move();
 	}
 
+	CheckNull(State);
 	State->SetIdleMode();
 }
 
 void ACEnemy::End_Knockdown()
 {
+	CheckNull(State);
 	CheckTrue(State->IsDeadMode());
 
 	if (!!GetupMontage)
@@ -459,28 +501,50 @@ void ACEnemy::End_Knockdown()
 
 void ACEnemy::End_Getup()
 {
+	CheckNull(State);
 	// TODO 추후에 전투중일 때 Idle이 아닐경우도 고려해야함
 	State->SetIdleMode();
 }
 
 void ACEnemy::Landed(const FHitResult& Hit)
 {
+	CheckNull(State);
 	if (State->IsKnockdownMode())
 	{
-		FTimerDelegate timerDelegate = FTimerDelegate::CreateUObject(this, &ACEnemy::End_Knockdown);
-		if (!GetWorld()->GetTimerManager().IsTimerActive(Handle_Knockdown))
-		{
-			GetWorld()->GetTimerManager().SetTimer(Handle_Knockdown, timerDelegate, KnockdownTime, false);
-		}
+		CheckTrue(GetWorld()->GetTimerManager().IsTimerActive(Handle_Knockdown));
+
+		FTimerDelegate timerDelegate = FTimerDelegate::CreateWeakLambda(this, [this]() {
+			End_Knockdown();
+		});
+		GetWorld()->GetTimerManager().SetTimer(Handle_Knockdown, timerDelegate, KnockdownTime, false);
 	}
+}
+
+void ACEnemy::OnHighlight()
+{
+	CheckNull(HighlightMaterialDynamic);
+	HighlightMaterialDynamic->SetScalarParameterValue("LineThickness", 2.0f);
+}
+
+void ACEnemy::OffHighlight()
+{
+	CheckNull(HighlightMaterialDynamic);
+	HighlightMaterialDynamic->SetScalarParameterValue("LineThickness", 0.0f);
+}
+
+void ACEnemy::InitOverlayMaterial()
+{
+	HighlightMaterialDynamic = UMaterialInstanceDynamic::Create(HighlightMaterial, this);
+	GetMesh()->SetOverlayMaterial(HighlightMaterialDynamic);
+	OffHighlight();
 }
 
 // Weapon State Type Changed
 void ACEnemy::OnWeaponTypeChanged(EWeaponType InPrevType, EWeaponType InNewType)
 {
-	CheckNull(StateForDebug);
+	CheckNotValid(StateForDebug);
 
-	FString s = GetName() + " OnWeaponTypeChanged " + FString::FromInt((int8)InPrevType) + " to " + FString::FromInt((int8)InNewType);
+	// FString s = GetName() + " OnWeaponTypeChanged " + FString::FromInt((int8)InPrevType) + " to " + FString::FromInt((int8)InNewType);
 
 	StateForDebug->UpdateWeaponState(InNewType);
 }

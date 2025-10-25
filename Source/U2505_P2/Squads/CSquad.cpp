@@ -65,14 +65,18 @@ void ACSquad::BeginPlay()
 		{
 			UKismetSystemLibrary::DrawDebugSphere(GetWorld(), location, 50.0f, 16, FLinearColor::Green, 10.0f);
 		}
-		ACEnemy_AI* ai = GetWorld()->SpawnActor<ACEnemy_AI>(squadType.EnemyClass, transform, params);
+		ACEnemy_AI* ai = GetWorld()->SpawnActorDeferred<ACEnemy_AI>(squadType.EnemyClass, transform, this, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (!IsValid(ai))
 			continue;
 
 		ai->SetOwnerSquad(this, (uint8)TeamId);
 		ai->SetBodyColor(Color);
 
-		Members.AddUnique(Cast<IISquadable>(ai));
+		ai->OnDestroyed.AddDynamic(this, &ACSquad::OnDestroyed);
+
+		ai->FinishSpawning(transform);
+
+		Members.AddUnique(ai);
 	}
 }
 
@@ -101,9 +105,9 @@ void ACSquad::OrderMembers(ACharacter* InTarget)
 	// 상대가 Squad가 아닌경우
 	if (is == nullptr)
 	{
-		for (IISquadable* member : Members)
+		for (TWeakInterfacePtr<IISquadable> member : Members)
 		{
-			if (IsValid(Cast<UObject>(member)))
+			if (member.IsValid())
 				member->SetOrderTarget(InTarget);
 		}
 
@@ -124,11 +128,19 @@ void ACSquad::OrderMembers(ACSquad* InTargetSquad)
 
 	for (int32 i = 0; i < Members.Num(); i++)
 	{
-		if (IsValid(Cast<UObject>(Members[i])))
+		if (Members[i].IsValid())
 		{
-			ACharacter* target = Cast<ACharacter>(InTargetSquad->Members[i % minSize]);
+			ACharacter* target = Cast<ACharacter>(InTargetSquad->Members[i % minSize].Get());
 
 			Members[i]->SetOrderTarget(target);
 		}
 	}
+}
+
+void ACSquad::OnDestroyed(AActor* DestroyedActor)
+{
+	IISquadable* squadable = Cast<IISquadable>(DestroyedActor);
+
+	CheckNull(squadable);
+	Members.Remove(squadable);
 }

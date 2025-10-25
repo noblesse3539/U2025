@@ -29,12 +29,22 @@ void UCWeaponTraceComponent::BeginPlay()
 	OwnerWeapon->OnAttachmentEndCollision.AddDynamic(this, &UCWeaponTraceComponent::OffTraceEnable);
 }
 
+void UCWeaponTraceComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	OnWeaponTraceBeginOverlap.RemoveAll(this);
+
+	Super::EndPlay(EndPlayReason);
+}
+
 void UCWeaponTraceComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	CheckFalse(bTraceEnable);
 	CheckFalse(bIsValid);
+
+	CheckNull(OwnerMesh);
+	CheckNull(OwnerWeapon);
 
 	FVector start = OwnerMesh->GetSocketLocation(StartSocket);
 	FVector end = OwnerMesh->GetSocketLocation(EndSocket);

@@ -79,27 +79,31 @@ void ACGhostTrail::BeginPlay()
 	Super::BeginPlay();
 
 	OwnerCharacter = Cast<ACharacter>(GetOwner());
+	CheckNull(OwnerCharacter);
 
 	bUseInterp ? SetActorTickInterval(InterpStartInterval) : SetActorTickInterval(Interval);
 
 	CreateAndSetMaterial();
 
-	for (int32 i = 0; i < OwnerCharacter->GetMesh()->GetMaterials().Num(); i++)
+	USkeletalMeshComponent* ownerMesh = OwnerCharacter->GetMesh();
+	CheckNull(ownerMesh);
+
+	for (int32 i = 0; i < ownerMesh->GetMaterials().Num(); i++)
 	{
 		Mesh->SetMaterial(i, Material);
 	}
 
 	if (CaptureCount < 1)
 	{
-		Mesh->SetSkinnedAssetAndUpdate(OwnerCharacter->GetMesh()->GetSkeletalMeshAsset());
-		Mesh->CopyPoseFromSkeletalComponent(OwnerCharacter->GetMesh());
+		Mesh->SetSkinnedAssetAndUpdate(ownerMesh->GetSkeletalMeshAsset());
+		Mesh->CopyPoseFromSkeletalComponent(ownerMesh);
 	}
 	else
 	{
 		for (int32 i = 0; i < CaptureCount; i++)
 		{
 			FPoseableMeshParts poseableMeshParts;
-			for (USceneComponent* child : OwnerCharacter->GetMesh()->GetAttachChildren())
+			for (USceneComponent* child : ownerMesh->GetAttachChildren())
 			{
 				USkeletalMeshComponent* childMesh = Cast<USkeletalMeshComponent>(child);
 				if (childMesh == nullptr)

@@ -10,6 +10,13 @@ void UCStateComponent::BeginPlay()
 	Super::BeginPlay();
 }
 
+void UCStateComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	OnStateTypeChanged.RemoveAll(this);
+}
+
 void UCStateComponent::SetIdleMode()
 {
 	ChangeType(EStateType::Idle);

@@ -4,17 +4,30 @@
 
 #include "Components/CStateComponent.h"
 #include "Components/CMovementComponent.h"
+
 void UCEquipment::BeginPlay(ACharacter* InOwnerCharacter, const FEquipmentData& InData)
 {
 	Data = InData;
 	OwnerCharacter = InOwnerCharacter;
 
-	State = FHelpers::GetComponent<UCStateComponent>(OwnerCharacter);
-	Movement = FHelpers::GetComponent<UCMovementComponent>(OwnerCharacter);
+	State = FHelpers::GetComponent<UCStateComponent>(OwnerCharacter.Get());
+	Movement = FHelpers::GetComponent<UCMovementComponent>(OwnerCharacter.Get());
+}
+
+void UCEquipment::BeginDestroy()
+{
+	OnEquipmentBeginEquip.RemoveAll(this);
+	OnEquipmentUnequip.RemoveAll(this);
+
+	Super::BeginDestroy();
 }
 
 void UCEquipment::Equip_Implementation()
 {
+	CheckNotValid(OwnerCharacter);
+	CheckNotValid(State);
+	CheckNotValid(Movement);
+
 	State->SetEquipMode();
 
 	if (Data.bCanMove == false)
@@ -42,6 +55,9 @@ void UCEquipment::Begin_Equip_Implementation()
 
 void UCEquipment::End_Equip_Implementation()
 {
+	CheckNotValid(State);
+	CheckNotValid(Movement);
+
 	if (Data.bCanMove == false)
 	{
 		Movement->Move();
@@ -51,7 +67,6 @@ void UCEquipment::End_Equip_Implementation()
 
 void UCEquipment::Unequip_Implementation()
 {
-
 	if (OnEquipmentUnequip.IsBound())
 	{
 		OnEquipmentUnequip.Broadcast();

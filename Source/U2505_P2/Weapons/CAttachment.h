@@ -10,6 +10,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttachmentEndCollision);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FAttachmentBeginOverlap, class ACharacter*, InAttacker, AActor*, InAttackCauser, UShapeComponent*, InAttackCollision, class ACharacter*, InOther);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAttachmentEndOverlap, class ACharacter*, InAttacker, class ACharacter*, InOther);
 
+class UCEquipment;
+
 UCLASS()
 class U2505_P2_API ACAttachment : public AActor
 {
@@ -28,6 +30,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Attachment")
@@ -46,9 +49,15 @@ public:
 	void OnEquipmentUnequip();
 	void OnEquipmentUnequip_Implementation() {}
 
+public:
+	void SetEquipment(UCEquipment* InEquipment);
+
 protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Owner")
 	class ACharacter* OwnerCharacter;
+
+private:
+	TWeakObjectPtr<UCEquipment> Equipment;
 
 public:
 	UFUNCTION()
@@ -64,7 +73,7 @@ public:
 private:
 	UPROPERTY()
 	TArray<class UShapeComponent*> Collisions;
-	
+
 public:
 	FAttachmentBeginCollision OnAttachmentBeginCollision;
 	FAttachmentEndCollision	  OnAttachmentEndCollision;

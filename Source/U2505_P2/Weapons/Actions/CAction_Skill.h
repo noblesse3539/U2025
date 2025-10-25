@@ -20,6 +20,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Moving")
 	float Speed = 100.0f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Trace")
+	TEnumAsByte<ETraceTypeQuery> TraceChannel = ETraceTypeQuery::TraceTypeQuery5;
+
 public:
 	void BeginPlay(class ACharacter* InOwnerCharacter, class ACAttachment* InAttachment, class UCEquipment* InEquipment, const EActionType InActionType) override;
 	void Tick(float InDeltaTime) override;

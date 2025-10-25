@@ -30,8 +30,14 @@ void ACAIController::BeginPlay()
 	Super::BeginPlay();
 
 	Perception->OnPerceptionUpdated.AddDynamic(this, &ACAIController::OnPerceptionUpdated);
+}
 
-	CheckNull(Blackboard);
+void ACAIController::BeginDestroy()
+{
+	if (IsValid(Perception))
+		Perception->OnPerceptionUpdated.RemoveDynamic(this, &ACAIController::OnPerceptionUpdated);
+
+	Super::BeginDestroy();
 }
 
 void ACAIController::OnPossess(APawn* InPawn)
@@ -39,6 +45,9 @@ void ACAIController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 
 	Enemy = Cast<ACEnemy_AI>(InPawn);
+	CheckNull(Enemy);
+
+	SetGenericTeamId(Enemy->GetGenericTeamId());
 
 	CheckNull(Enemy->GetBehaviorTree());
 	RunBehaviorTree(Enemy->GetBehaviorTree());

@@ -16,7 +16,7 @@ void UCMovementComponent::BeginPlay()
 	OwnerCharacter = Cast<ACharacter>(GetOwner());
 	CheckNull(OwnerCharacter);
 
-	OwnerCharacter->GetCharacterMovement()->MaxWalkSpeed = 150;
+	OnWalk();
 	// OwnerCharacter->GetCharacterMovement()->JumpZVelocity = 700;
 
 	OffFixForward();

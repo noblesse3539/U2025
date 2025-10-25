@@ -22,6 +22,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Stats")
 	float RecoveryInterpSpeed = 2.0f;
 
+public:
+	virtual void BeginDestroy() override;
+
 protected:
 	void NativeOnInitialized() override;
 	void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
@@ -73,13 +76,10 @@ private:
 	FTimerHandle Handle_healthTail;
 	FTimerHandle Handle_Recovery;
 
-	
-
 public:
 	FORCEINLINE void OnCanRecovery() { bCanRecovery = true; }
 	FORCEINLINE void OffCanRecovery() { bCanRecovery = false; }
 
 	FORCEINLINE void OnCanUpdateHealthTail() { bCanUpdateHealthTail = true; }
 	FORCEINLINE void OffCanUpdateHealthTail() { bCanUpdateHealthTail = false; }
-
 };

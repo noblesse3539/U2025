@@ -7,18 +7,19 @@
 #include "GenericTeamAgentInterface.h"
 #include "Weapons/CWeaponStructures.h"
 #include "Weapons/Actions/CAction_Defend.h"
+#include "Characters/CPlayer.h"
 
 void UCDoAction_Combo::Tick(float InDeltaTime)
 {
 	Super::Tick(InDeltaTime);
+	CheckNotValid(OwnerCharacter);
+	CheckNotValid(Candidate);
 
-	CheckNull(Candidate);
-
-	APlayerController* controller = OwnerCharacter->GetController<APlayerController>();
+	APlayerController* controller = OwnerCharacter.Get()->GetController<APlayerController>();
 	CheckNull(controller);
 
-	FRotator ownerToTarget = UKismetMathLibrary::FindLookAtRotation(OwnerCharacter->GetActorLocation(), Candidate->GetActorLocation());
-	FRotator controlRotation = OwnerCharacter->GetControlRotation();
+	FRotator ownerToTarget = UKismetMathLibrary::FindLookAtRotation(OwnerCharacter.Get()->GetActorLocation(), Candidate->GetActorLocation());
+	FRotator controlRotation = OwnerCharacter.Get()->GetControlRotation();
 
 	ownerToTarget.Pitch = controlRotation.Pitch;
 
@@ -38,6 +39,9 @@ void UCDoAction_Combo::Tick(float InDeltaTime)
 
 void UCDoAction_Combo::DoAction()
 {
+	CheckNotValid(OwnerCharacter);
+	CheckNotValid(State);
+
 	if (bEnable)
 	{
 		bEnable = false;
@@ -47,14 +51,26 @@ void UCDoAction_Combo::DoAction()
 
 	CheckFalse(Datas.Num() > 0);
 
-	CheckFalse(State->IsIdleMode());
+	CheckFalse(State.Get()->IsIdleMode());
 
 	Super::DoAction();
-	Datas[Index].DoAction(OwnerCharacter);
+	Datas[Index].DoAction(OwnerCharacter.Get());
 }
 
 void UCDoAction_Combo::Begin_DoAction()
 {
+	CheckNotValid(OwnerCharacter);
+	// 적 AI의 콤보 확률 설정
+	if (!OwnerCharacter->IsA<ACPlayer>())
+	{
+		float temp = UKismetMathLibrary::RandomFloatInRange(0.0f, 1.0f);
+		FLog::Log(temp);
+		if (temp >= 1.0f - ComboRate)
+		{
+			bExist = true;
+		}
+	}
+
 	CheckFalse(bExist);
 
 	bExist = false;
@@ -64,20 +80,24 @@ void UCDoAction_Combo::Begin_DoAction()
 	CheckFalse((int32)(Index + 1) < Datas.Num());
 	Index++;
 
-	Datas[Index].DoAction(OwnerCharacter);
+	Datas[Index].DoAction(OwnerCharacter.Get());
 }
 
 void UCDoAction_Combo::End_DoAction()
 {
+	CheckNotValid(OwnerCharacter);
+
 	Super::End_DoAction();
 
-	Datas[Index].End_DoAction(OwnerCharacter);
+	Datas[Index].End_DoAction(OwnerCharacter.Get());
 
 	Index = 0;
 }
 
 void UCDoAction_Combo::OnAttachmentEndCollision()
 {
+	CheckNotValid(OwnerCharacter);
+
 	Super::OnAttachmentEndCollision();
 
 	if (Datas[Index].bFixedCamera == false)
@@ -88,7 +108,7 @@ void UCDoAction_Combo::OnAttachmentEndCollision()
 	}
 
 	float	angle = FLT_MIN;
-	FVector location = OwnerCharacter->GetActorLocation();
+	FVector location = OwnerCharacter.Get()->GetActorLocation();
 
 	for (ACharacter* character : Hits)
 	{
@@ -98,7 +118,7 @@ void UCDoAction_Combo::OnAttachmentEndCollision()
 		FVector direction = character->GetActorLocation() - location;
 		direction = direction.GetUnsafeNormal2D();
 
-		FVector forward = OwnerCharacter->GetActorForwardVector();
+		FVector forward = OwnerCharacter.Get()->GetActorForwardVector();
 		float	dot = FVector::DotProduct(direction, forward);
 
 		if (dot < HittedAngle || dot < angle)
@@ -106,6 +126,7 @@ void UCDoAction_Combo::OnAttachmentEndCollision()
 
 		angle = dot;
 		Candidate = character;
+		break;
 	}
 
 	Hits.Empty();
@@ -113,11 +134,10 @@ void UCDoAction_Combo::OnAttachmentEndCollision()
 
 void UCDoAction_Combo::OnAttachmentBeginOverlap(ACharacter* InAttacker, AActor* InAttackCauser, UShapeComponent* InAttackCollision, ACharacter* InOther)
 {
-	
-	Super::OnAttachmentBeginOverlap(InAttacker, InAttackCauser, InAttackCollision, InOther);
-	
 	CheckNull(OwnerCharacter);
 	CheckTrue(InOther == OwnerCharacter);
+
+	Super::OnAttachmentBeginOverlap(InAttacker, InAttackCauser, InAttackCollision, InOther);
 
 	// ActionType 검사
 	CheckFalse(IsValidActionType());
@@ -137,7 +157,7 @@ void UCDoAction_Combo::OnAttachmentBeginOverlap(ACharacter* InAttacker, AActor* 
 			defend->ParringActionData.DoAction(InOther);
 
 			// 패링 데미지 처리
-			defend->ParringDamagedData.SendDamage(InOther, InAttackCauser, InAttackCollision, OwnerCharacter);
+			defend->ParringDamagedData.SendDamage(InOther, InAttackCauser, InAttackCollision, OwnerCharacter.Get());
 			return;
 		}
 	}
@@ -150,5 +170,5 @@ void UCDoAction_Combo::OnAttachmentBeginOverlap(ACharacter* InAttacker, AActor* 
 	Hits.Add(InOther);
 
 	CheckFalse(Index < (uint32)DamagedDatas.Num());
-	DamagedDatas[Index].SendDamage(OwnerCharacter, InAttackCauser, InAttackCollision, InOther, bFirstHit);
+	DamagedDatas[Index].SendDamage(OwnerCharacter.Get(), InAttackCauser, InAttackCollision, InOther, bFirstHit);
 }

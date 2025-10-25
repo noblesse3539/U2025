@@ -42,6 +42,17 @@ void FLog::Log(const UObject* InValue)
 	UE_LOG(Game, Display, L"%s", *str);
 }
 
+void FLog::Log(const FString& InFileName, const FString& InFuncName, int32 InLineNumber)
+{
+	int32 index = 0, length = 0;
+	InFileName.FindLastChar(L'\\', index);
+
+	length = InFileName.Len() - 1;
+	FString fileName = InFileName.Right(length - index);
+
+	UE_LOG(Game, Warning, L"%s, %s, %d", *fileName, *InFuncName, InLineNumber);
+}
+
 void FLog::Print(int32 InValue, int32 InKey, float InDuration, const FColor& InColor)
 {
 	GEngine->AddOnScreenDebugMessage(InKey, InDuration, InColor, FString::FromInt(InValue));

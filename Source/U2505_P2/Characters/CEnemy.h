@@ -3,10 +3,15 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "ICharacterState.h"
+#include "Interfaces/IHighlightable.h"
 #include "CEnemy.generated.h"
 
+class UWidgetComponent;
+class UCUserWidget_HP;
+class UCUserWidget_State;
+
 UCLASS()
-class U2505_P2_API ACEnemy : public ACharacter, public IICharacterState
+class U2505_P2_API ACEnemy : public ACharacter, public IICharacterState, public IIHighlightable
 {
 	GENERATED_BODY()
 
@@ -39,6 +44,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Settings")
 	float DefenceDamageReduceRate = 0.4f;
 
+	UPROPERTY(EditAnywhere, Category = "Settings")
+	class UMaterialInterface* HighlightMaterial;
+
 protected:
 	UPROPERTY(VisibleAnywhere)
 	class UCMovementComponent* Movement;
@@ -64,6 +72,9 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+public:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -119,17 +130,27 @@ public:
 
 	virtual void Landed(const FHitResult& Hit) override;
 
-private:
-	class UWidgetComponent* HP_Widget;
-	class UCUserWidget_HP*	HealthPoint = nullptr;
+	virtual void OnHighlight() override;
+	virtual void OffHighlight() override;
 
 private:
-	class UWidgetComponent*	  State_Widget;
-	class UCUserWidget_State* StateForDebug = nullptr;
+	void InitOverlayMaterial();
+
+private:
+	TWeakObjectPtr<UWidgetComponent> HP_Widget;
+	TWeakObjectPtr<UCUserWidget_HP>	 HealthPoint = nullptr;
+
+private:
+	TWeakObjectPtr<UWidgetComponent>   State_Widget;
+	TWeakObjectPtr<UCUserWidget_State> StateForDebug = nullptr;
 
 private:
 	bool		 bKnockdown;
 	FTimerHandle Handle_Knockdown;
+
+private:
+	UPROPERTY()
+	class UMaterialInstanceDynamic* HighlightMaterialDynamic;
 
 public:
 	UFUNCTION()

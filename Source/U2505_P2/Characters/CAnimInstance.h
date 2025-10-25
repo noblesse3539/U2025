@@ -8,6 +8,10 @@
 
 #include "CAnimInstance.generated.h"
 
+class UCWeaponComponent;
+class UCStateComponent;
+class UCFeetComponent;
+
 UCLASS()
 class U2505_P2_API UCAnimInstance : public UAnimInstance
 {
@@ -49,10 +53,26 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Feet")
 	FFeetData FeetData;
 
+protected:
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Bow")
+	bool bBowstring;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Bow")
+	bool bPullBowstring;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Bow")
+	FVectorData BowstringLocation;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Bow")
+	float Pitch;
+
 public:
 	void NativeBeginPlay() override;
 	void NativeUpdateAnimation(float DeltaSeconds) override;
 	// void OnMontageInstanceStopped(FAnimMontageInstance& StoppedMontageInstance) override;
+
+public:
+	virtual void BeginDestroy() override;
 
 private:
 	UFUNCTION()
@@ -66,12 +86,12 @@ private:
 	void OnActionTypeChanged(EActionType InPrevType, EActionType InNewType);
 
 private:
-	class ACharacter* OwnerCharacter;
+	TWeakObjectPtr<ACharacter> OwnerCharacter;
 
 private:
-	class UCWeaponComponent* Weapon;
-	class UCStateComponent*	 State;
+	TWeakObjectPtr<UCWeaponComponent> Weapon;
+	TWeakObjectPtr<UCStateComponent>  State;
 
 private:
-	class UCFeetComponent* Feet;
+	TWeakObjectPtr<UCFeetComponent> Feet;
 };

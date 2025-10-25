@@ -65,7 +65,7 @@ EBTNodeResult::Type UCBTTaskNode_Action::AbortTask(UBehaviorTreeComponent& Owner
 	UCWeaponComponent* weapon = FHelpers::GetComponent<UCWeaponComponent>(ai);
 	CheckNullResult(weapon, EBTNodeResult::Failed);
 
-	weapon->EndDoAction();
+	// weapon->EndDoAction(); // 공격 중 피격받을 때 EndDoAction에서 상태를 Idle로 변경해서 Damage 상태로 가지 않는 문제 발생. 추후 삭제 예정
 
 	return EBTNodeResult::Aborted;
 }

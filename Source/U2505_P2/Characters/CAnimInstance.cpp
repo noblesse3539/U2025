@@ -14,56 +14,87 @@ void UCAnimInstance::NativeBeginPlay()
 	Super::NativeBeginPlay();
 
 	OwnerCharacter = Cast<ACharacter>(TryGetPawnOwner());
-	CheckNull(OwnerCharacter);
+	CheckNotValid(OwnerCharacter);
 
-	Weapon = FHelpers::GetComponent<UCWeaponComponent>(OwnerCharacter);
-	if (!!Weapon)
+	Weapon = FHelpers::GetComponent<UCWeaponComponent>(OwnerCharacter.Get());
+	if (Weapon.IsValid())
 	{
-		Weapon->OnWeaponTypeChanged.AddDynamic(this, &UCAnimInstance::OnWeaponTypeChanged);
-		Weapon->OnActionTypeChanged.AddDynamic(this, &UCAnimInstance::OnActionTypeChanged);
+		Weapon.Get()->OnWeaponTypeChanged.AddDynamic(this, &UCAnimInstance::OnWeaponTypeChanged);
+		Weapon.Get()->OnActionTypeChanged.AddDynamic(this, &UCAnimInstance::OnActionTypeChanged);
 	}
 
-	State = FHelpers::GetComponent<UCStateComponent>(OwnerCharacter);
-	if (!!State)
+	State = FHelpers::GetComponent<UCStateComponent>(OwnerCharacter.Get());
+	if (State.IsValid())
 	{
-		State->OnStateTypeChanged.AddDynamic(this, &UCAnimInstance::OnStateTypeChanged);
+		State.Get()->OnStateTypeChanged.AddDynamic(this, &UCAnimInstance::OnStateTypeChanged);
 	}
 
-	Feet = FHelpers::GetComponent<UCFeetComponent>(OwnerCharacter);
+	Feet = FHelpers::GetComponent<UCFeetComponent>(OwnerCharacter.Get());
 }
 
 void UCAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
-	CheckNull(OwnerCharacter);
 
-	Speed = OwnerCharacter->GetVelocity().Size2D();
+	if (OwnerCharacter.IsValid())
+	{
+		Speed = OwnerCharacter.Get()->GetVelocity().Size2D();
 
-	FRotator rotation = OwnerCharacter->GetVelocity().ToOrientationRotator();
-	FRotator rotation2 = OwnerCharacter->GetControlRotation();
-	FRotator result = UKismetMathLibrary::NormalizedDeltaRotator(rotation, rotation2);
-	Direction = result.Yaw;
+		FRotator rotation = OwnerCharacter.Get()->GetVelocity().ToOrientationRotator();
+		FRotator rotation2 = OwnerCharacter.Get()->GetControlRotation();
+		FRotator result = UKismetMathLibrary::NormalizedDeltaRotator(rotation, rotation2);
+		Direction = result.Yaw;
 
-	bFalling = OwnerCharacter->GetCharacterMovement()->IsFalling();
+		bFalling = OwnerCharacter.Get()->GetCharacterMovement()->IsFalling();
+
+		Pitch = -OwnerCharacter->GetBaseAimRotation().Pitch / 90.0f;
+	}
 
 	bEquip_Sword = WeaponType == EWeaponType::Sword;
 	// bKnockdown = StateType == EStateType::Knockdown;
 	bDefend = bEquip_Sword && (StateType == EStateType::Defend); // 무기 장착이 된 상태에서 디펜드여야함.
 
-	StateType = State->GetStateType();
-	WeaponType = Weapon->GetWeaponType();
+	if (State.IsValid())
+	{
+		StateType = State.Get()->GetStateType();
+	}
+
+	if (Weapon.IsValid())
+	{
+		WeaponType = Weapon.Get()->GetWeaponType();
+
+		bBowstring = Weapon.Get()->IsBowstring();
+		bPullBowstring = Weapon.Get()->IsPullBowstring();
+
+		if (bPullBowstring)
+		{
+			Weapon.Get()->GetWeaponSocketLocation("Hand_Bowstring", BowstringLocation);
+		}
+	}
 
 	bUseFootIK = false;
 
-	if (!!Feet && !bFalling)
+	if (Feet.IsValid() && !bFalling)
 	{
 		bUseFootIK = true;
-		FeetData = Feet->GetData();
+		FeetData = Feet.Get()->GetData();
+	}
+}
+
+void UCAnimInstance::BeginDestroy()
+{
+	if (Weapon.IsValid())
+	{
+		Weapon.Get()->OnWeaponTypeChanged.RemoveDynamic(this, &UCAnimInstance::OnWeaponTypeChanged);
+		Weapon.Get()->OnActionTypeChanged.RemoveDynamic(this, &UCAnimInstance::OnActionTypeChanged);
 	}
 
-	ACPlayer* player = Cast<ACPlayer>(OwnerCharacter);
+	if (State.IsValid())
+	{
+		State.Get()->OnStateTypeChanged.RemoveDynamic(this, &UCAnimInstance::OnStateTypeChanged);
+	}
 
-	CheckNull(player);
+	Super::BeginDestroy();
 }
 
 void UCAnimInstance::OnWeaponTypeChanged(EWeaponType InPrevType, EWeaponType InNewType)

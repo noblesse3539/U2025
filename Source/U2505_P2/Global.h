@@ -8,3 +8,5 @@
 
 #include "Utilities/FHelpers.h"
 #include "Utilities/FLog.h"
+
+#include <limits>

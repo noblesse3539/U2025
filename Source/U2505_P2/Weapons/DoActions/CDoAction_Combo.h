@@ -19,6 +19,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Hitted")
 	float RotationSpeed = 20.0f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Auto")
+	float ComboRate = 0.7f; // Àû AIÀÇ ÄÞº¸ È®·ü
+
 public:
 	void Tick(float InDeltaTime) override;
 
@@ -31,7 +34,7 @@ public:
 	FORCEINLINE void OnEnableCombo() { bEnable = true; }
 	FORCEINLINE void OffEnableCombo() { bEnable = false; }
 
-private:
+protected:
 	UINT Index;
 
 private:
@@ -42,7 +45,7 @@ private:
 	UPROPERTY()
 	TArray<class ACharacter*> Hits;
 
-	class ACharacter* Candidate;
+	TWeakObjectPtr<ACharacter> Candidate;
 
 public:
 	void OnAttachmentEndCollision() override;

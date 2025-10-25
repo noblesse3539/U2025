@@ -13,6 +13,13 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Settings")
 	float FallingPower = 3000.0f;
 
+private:
+	UPROPERTY(EditDefaultsOnly, Category = "Settings")
+	FName Socket_Origin = "Hand_Sword";
+
+	UPROPERTY(EditDefaultsOnly, Category = "Settings")
+	FName Socket_Action = "Hand_Sword_Reverse";
+
 public:
 	void Tick(float InDeltaTime) override;
 
@@ -31,8 +38,4 @@ private:
 public:
 	void OnAttachmentEndCollision() override;
 	void OnAttachmentBeginOverlap(class ACharacter* InAttacker, AActor* InAttackCauser, class UShapeComponent* InAttackCollision, class ACharacter* InOther) override;
-
-private:
-	FName Socket_Origin = "MainHandSocket";
-	FName Socket_Action = "MainHandSocket_Reverse";
 };
